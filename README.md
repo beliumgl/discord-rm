@@ -19,7 +19,8 @@ This tool utilizes [ArgParse](https://github.com/p-ranav/argparse) for command-l
 | `-v`  | `--verbose`     | Enables verbose logging.                                                                   |                                     
 | `-d`  | `--debug`       | Outputs debug information for developers.                                                  |                                           
 | `-nc` | `--no-confirm`  | Deletes messages without initial confirmation.                                             |                                      
-| `-i`  | `--interactive` | Prompts for required data interactively instead of via command-line arguments.             |                                     
+| `-i`  | `--interactive` | Prompts for required data interactively instead of via command-line arguments.             | 
+| `-sif`| `--skip-if-fail`| Won't exit if message deletion fails.                                                      | 
 | `-s`  | `--sender-id`   | Specifies the user ID whose messages should be removed (requires appropriate permissions). |                                   
 | `-g`  | `--guild-id`    | Specifies the server (guild) ID where messages should be removed.                          |                    
 | `-c`  | `--channel-id`  | Specifies the channel ID within the guild where messages should be removed.                | 
