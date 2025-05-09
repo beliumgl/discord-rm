@@ -13,6 +13,7 @@ bool         IS_VERBOSE      = false;
 bool         IS_DEBUG        = false;
 bool         IS_NOCONFIRM    = false;
 bool         IS_INTERACTIVE  = false;
+bool         IS_SKIP_IF_FAIL = false;
 std::string  SENDER_ID;
 std::string  GUILD_ID;
 std::string  CHANNEL_ID;

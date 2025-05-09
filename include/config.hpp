@@ -14,6 +14,7 @@ extern bool        IS_VERBOSE;
 extern bool        IS_DEBUG;
 extern bool        IS_NOCONFIRM;
 extern bool        IS_INTERACTIVE;
+extern bool        IS_SKIP_IF_FAIL;
 extern std::string SENDER_ID;
 extern std::string GUILD_ID;
 extern std::string CHANNEL_ID;

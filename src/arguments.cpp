@@ -30,6 +30,10 @@ argparse::ArgumentParser& createArguments() {
         .help("Interactive mode.")
         .default_value(false)
         .implicit_value(true);
+    program.add_argument("-sif", "--skip-if-fail")
+        .help("Won't exit if message deletion fails.")
+        .default_value(false)
+        .implicit_value(true);
     program.add_argument("-s", "--sender-id")
         .default_value(std::string(""))
         .help("Specify the sender's user ID");
@@ -60,11 +64,12 @@ void processArguments(ArgumentParser& program, int argc, char** argv) {
             throw std::invalid_argument("`--channel-id` is required unless `--interactive` is set.");
     }
 
-    IS_INTERACTIVE = isInteractive;
-    SENDER_ID      = sender;
-    GUILD_ID       = guild;
-    CHANNEL_ID     = channel;
-    IS_VERBOSE     = program.get<bool>("--verbose");
-    IS_DEBUG       = program.get<bool>("--debug");
-    IS_NOCONFIRM   = program.get<bool>("--no-confirm");
+    IS_INTERACTIVE  = isInteractive;
+    SENDER_ID       = sender;
+    GUILD_ID        = guild;
+    CHANNEL_ID      = channel;
+    IS_VERBOSE      = program.get<bool>("--verbose");
+    IS_DEBUG        = program.get<bool>("--debug");
+    IS_NOCONFIRM    = program.get<bool>("--no-confirm");
+    IS_SKIP_IF_FAIL = program.get<bool>("--skip-if-fail");
 }
