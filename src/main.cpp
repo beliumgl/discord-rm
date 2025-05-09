@@ -80,8 +80,8 @@ int main(int argc, char** argv) {
 
     if (status != REMOVER_STATUS::OK)
         log(IS_VERBOSE, "Failed to remove messages.");
-
-    log(IS_VERBOSE, "All messages have been removed.");
+    else
+        log(IS_VERBOSE, "All messages have been removed.");
 
     return status == REMOVER_STATUS::OK ? 0 : 1;
 }
