@@ -16,11 +16,4 @@ enum class REMOVER_STATUS {
     DELETE_MESSAGE_FAILED = 2
 };
 
-REMOVER_STATUS discordRM(bool isVerbose,
-                         bool isDebug,
-                         unsigned int delay,
-                         unsigned int defaultDelay,
-                         const std::string& discordToken,
-                         const std::string& guildID,
-                         const std::string& channelID,
-                         const std::string& senderID);
+REMOVER_STATUS discordRM();

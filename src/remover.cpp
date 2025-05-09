@@ -8,6 +8,7 @@
 
 #include <include/remover.hpp>
 #include <include/helpers.hpp>
+#include <include/config.hpp>
 #include <include/json.hpp>
 #include <curl/curl.h>
 #include <string>
@@ -16,47 +17,43 @@
 #include <stdexcept>
 #include <chrono>
 #include <thread>
+#include <unordered_set>
 
 using nlohmann::json;
 using Query = std::pair<std::string, std::string>;
 
 struct Message {
-    std::string channelID;
+    std::string CHANNEL_ID;
     std::string ID;
     int type;
 
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(Message, ID, type);
 };
 
-json search(bool isVerbose,
-            bool isDebug,
-            const std::string& discordToken,
-            const std::string& guildID,
-            const std::string& channelID,
-            const std::string& senderID) {
-    debug(isDebug, std::string("[Search] Parameters: isVerbose = ")
-        + (isVerbose ? "true" : "false") + ", isDebug = "
-        + (isDebug ? "true" : "false") + ", guildID = "
-        + guildID + ", channelID = "
-        + channelID + ", senderID = " + senderID);
-    log(isVerbose, "Search: Making API URL...");
-    std::string apiURL = isDMGuild(guildID)
-                            ? "https://discord.com/api/v9/channels/" + channelID + "/messages/"
-                            : "https://discord.com/api/v9/guilds/" + guildID + "/messages/";
+json search() {
+    debug(IS_DEBUG, std::string("[Search] Parameters: IS_VERBOSE = ")
+        + (IS_VERBOSE ? "true" : "false") + ", IS_DEBUG = "
+        + (IS_DEBUG ? "true" : "false") + ", GUILD_ID = "
+        + GUILD_ID + ", CHANNEL_ID = "
+        + CHANNEL_ID + ", SENDER_ID = " + SENDER_ID);
+    log(IS_VERBOSE, "Search: Making API URL...");
+    std::string apiURL = isDMGuild(GUILD_ID)
+                            ? "https://discord.com/api/v9/channels/" + CHANNEL_ID + "/messages/"
+                            : "https://discord.com/api/v9/guilds/" + GUILD_ID + "/messages/";
 
     std::vector<Query> params = {
-        {"author_id", senderID},
-        {"channel_id", (isDMGuild(guildID) ? channelID : "")}
+        {"author_id", SENDER_ID},
+        {"channel_id", (isDMGuild(GUILD_ID) ? CHANNEL_ID : "")}
     };
 
-    log(isVerbose, "Search: Making request parameters...");
+    log(IS_VERBOSE, "Search: Making request parameters...");
     std::string query = buildQueryString(params);
-    debug(isDebug, "Query Parameters: " + query);
-    log(isVerbose, "Search: Making full API URL...");
+    debug(IS_DEBUG, "Query Parameters: " + query);
+    log(IS_VERBOSE, "Search: Making full API URL...");
     std::string url = apiURL + "search?" + query;
-    debug(isDebug, "Full URL: " + url);
+    debug(IS_DEBUG, "Full URL: " + url);
 
-    log(isVerbose, "Search: Sending request...");
+    log(IS_VERBOSE, "Search: Sending request...");
     CURL* curl = curl_easy_init();
 
     if (!curl)
@@ -64,7 +61,7 @@ json search(bool isVerbose,
 
     std::string response;
     struct curl_slist* headers = nullptr;
-    std::string authHeader = "Authorization: " + discordToken;
+    std::string authHeader = "Authorization: " + DISCORD_TOKEN;
     headers = curl_slist_append(headers, authHeader.c_str());
 
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
@@ -75,7 +72,7 @@ json search(bool isVerbose,
     CURLcode result = curl_easy_perform(curl);
     if (result != CURLE_OK)
         throw std::runtime_error("Failed to send search request.");
-    debug(isDebug, "Response: " + response);
+    debug(IS_DEBUG, "Response: " + response);
 
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
@@ -83,38 +80,32 @@ json search(bool isVerbose,
     return json::parse(response);
 }
 
-void deleteMessage(bool isVerbose,
-                   bool isDebug,
-                   unsigned int& delay,
-                   unsigned int defaultDelay,
-                   const std::string& discordToken,
-                   const Message& message)
-{
-    debug(isDebug, std::string("[Delete Message] Parameters: isVerbose = ")
-        + (isVerbose ? "true" : "false") + ", isDebug = "
-        + (isDebug ? "true" : "false")  + ", delay = "
-        + std::to_string(delay) + "s, defaultDelay = "
-        + std::to_string(defaultDelay) + ", message (ID) = " + message.ID);
+void deleteMessage(const Message& message) {
+    debug(IS_DEBUG, std::string("[Delete Message] Parameters: IS_VERBOSE = ")
+        + (IS_VERBOSE ? "true" : "false") + ", IS_DEBUG = "
+        + (IS_DEBUG ? "true" : "false")  + ", DELETE_DELAY_IN_SECONDS = "
+        + std::to_string(DELETE_DELAY_IN_SECONDS) + "s, DELETE_DELAY_IN_SECONDS_DEFAULT = "
+        + std::to_string(DELETE_DELAY_IN_SECONDS_DEFAULT) + ", message (ID) = " + message.ID);
 
     using json = nlohmann::json;
 
     if ((message.type < 6 || message.type > 21) && message.type != 0) {
-        log(isVerbose, "Delete Message: System message. Skipping...");
+        log(IS_VERBOSE, "Delete Message: System message. Skipping...");
         return; // Cannot remove system message
     }
 
-    log(isVerbose, "Delete Message: Making API URL...");
-    std::string deleteAPIURL = "https://discord.com/api/v9/channels/" + message.channelID + "/messages/" + message.ID;
-    debug(isDebug, "Full URL: " + deleteAPIURL);
+    log(IS_VERBOSE, "Delete Message: Making API URL...");
+    std::string deleteAPIURL = "https://discord.com/api/v9/channels/" + message.CHANNEL_ID + "/messages/" + message.ID;
+    debug(IS_DEBUG, "Full URL: " + deleteAPIURL);
 
-    log(isVerbose, "Delete Message: Sending request...");
+    log(IS_VERBOSE, "Delete Message: Sending request...");
     CURL* curl = curl_easy_init();
     if (!curl)
         throw std::runtime_error("Failed to send delete message request.");
 
     std::string response;
     struct curl_slist* headers = nullptr;
-    std::string authHeader = "Authorization: " + discordToken;
+    std::string authHeader = "Authorization: " + DISCORD_TOKEN;
     headers = curl_slist_append(headers, authHeader.c_str());
 
     curl_easy_setopt(curl, CURLOPT_URL, deleteAPIURL.c_str());
@@ -130,7 +121,7 @@ void deleteMessage(bool isVerbose,
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
 
-    debug(isDebug, "Response: " + response + ", Code: " + std::to_string(httpCode));
+    debug(IS_DEBUG, "Response: " + response + ", Code: " + std::to_string(httpCode));
 
     if (result != CURLE_OK)
         throw std::runtime_error("Failed to send delete message request.");
@@ -139,10 +130,10 @@ void deleteMessage(bool isVerbose,
         if (!response.empty()) {
             try {
                 json j = json::parse(response);
-                log(isVerbose, "Delete Message: Rate limited by Discord API! Trying again later...");
-                delay = static_cast<unsigned int>(j["retry_after"].get<double>());
-                std::this_thread::sleep_for(std::chrono::seconds(delay * 2)); // Wait twice as long to ensure not hit rate limit again
-                delay = defaultDelay; // Reset back
+                log(IS_VERBOSE, "Delete Message: Rate limited by Discord API! Trying again later...");
+                DELETE_DELAY_IN_SECONDS = static_cast<unsigned int>(j["retry_after"].get<double>());
+                std::this_thread::sleep_for(std::chrono::seconds(DELETE_DELAY_IN_SECONDS * 2)); // Wait twice as long to ensure not hit rate limit again
+                DELETE_DELAY_IN_SECONDS = DELETE_DELAY_IN_SECONDS_DEFAULT; // Reset back
                 return;
             } catch (...) {
                 throw std::runtime_error("Failed to parse rate limit JSON.");
@@ -154,74 +145,79 @@ void deleteMessage(bool isVerbose,
         try {
             json j = json::parse(response);
             if (j.contains("code") && j["code"] == 50083) {
-                log(isVerbose, "Delete Message: Cannot remove archived thread. Skipping...");
+                log(IS_VERBOSE, "Delete Message: Cannot remove archived thread. Skipping...");
                 return;
             }
         } catch (...) {
             throw std::runtime_error("Failed to parse error JSON.");
         }
     } else if (httpCode < 200 || httpCode >= 300) {
-        log(isVerbose, "Delete Message: Failed to delete message.");
         throw std::runtime_error("Failed to delete message request.");
     }
 
-    log(isVerbose, "Delete Message: Message deleted successfully!");
+    log(IS_VERBOSE, "Delete Message: Message deleted successfully!");
 }
 
-REMOVER_STATUS discordRM(bool isVerbose,
-                         bool isDebug,
-                         unsigned int delay,
-                         unsigned int defaultDelay,
-                         const std::string& discordToken,
-                         const std::string& guildID,
-                         const std::string& channelID,
-                         const std::string& senderID) {
-    debug(isDebug, std::string("[Remover] Parameters: isVerbose = ")
-        + (isVerbose ? "true" : "false") + ", isDebug = "
-        + (isDebug ? "true" : "false") + ", delay = "
-        + std::to_string(delay) + "s, defaultDelay = "
-        + std::to_string(defaultDelay) + "s, guildID = "
-        + guildID + ", channelID = "
-        + channelID + ", senderID = " + senderID);
-    log(isVerbose, "Remover: Searching for messages to delete...");
+REMOVER_STATUS discordRM() {
+    log(IS_VERBOSE, "Remover: Searching for messages to delete...");
+    std::vector<Message> failedMsgs;
     json messages;
     do {
         try {
-            messages = search(isVerbose, isDebug, discordToken, guildID, channelID, senderID);
-            debug(isDebug, std::string("Messages [JSON]:\n") + messages.dump());
+            messages = search();
+            debug(IS_DEBUG, std::string("Messages [JSON]:\n") + messages.dump());
         } catch (...) {
-            log(isVerbose, "Remover: Search failed! Try again later.");
+            log(IS_VERBOSE, "Remover: Search failed! Try again later.");
             return REMOVER_STATUS::SEARCH_FAILED;
         }
 
         if (messages["messages"].empty()) { // fix infinite loop
-            log(isVerbose, "Remover: All messages have been removed.");
+            log(IS_VERBOSE, "Remover: All messages have been removed.");
             break;
         }
 
         // Parse Messages
-        log(isVerbose, "Remover: Parsing the messages...");
+        log(IS_VERBOSE, "Remover: Parsing the messages...");
         std::vector<Message> msgs;
         for (const auto& group : messages["messages"]) {
             for (const auto& msg : group) {
                 if (msg.contains("id")) {
                     Message m;
                     m.ID = msg["id"].get<std::string>();
-                    m.channelID = channelID;
+                    m.CHANNEL_ID = CHANNEL_ID;
                     m.type = msg["type"].get<int>();
                     msgs.push_back(m);
                 }
             }
         }
 
-        try {
-            for (const auto& msg: msgs) {
-                std::this_thread::sleep_for(std::chrono::seconds(delay)); // Delay to not hit rate limit
-                deleteMessage(isVerbose, isDebug, delay, defaultDelay, discordToken, msg);
+        if (!msgs.empty() && msgs.size() == failedMsgs.size() && IS_SKIP_IF_FAIL) { // Exit if only failed messages remain
+            std::unordered_set<std::string> failedIDs;
+            for (const auto& m : failedMsgs) failedIDs.insert(m.ID);
+
+            if (std::all_of(msgs.begin(), msgs.end(), [&](const Message& m) {
+                return failedIDs.count(m.ID) > 0;
+            })) {
+                log(IS_VERBOSE, "Remover: Only failed messages remain. Exiting...");
+                break;
             }
-        } catch (...) {
-            log(isVerbose, "Delete Message failed! Please try again later.");
-            return REMOVER_STATUS::DELETE_MESSAGE_FAILED;
+        }
+
+        Message currentMsg;
+        for (const auto& msg : msgs) {
+            try {
+                std::this_thread::sleep_for(std::chrono::seconds(DELETE_DELAY_IN_SECONDS)); // Delay to not hit rate limit
+                deleteMessage(msg);
+            } catch (...) {
+                if (IS_SKIP_IF_FAIL) {
+                    log(IS_VERBOSE, "Delete Message failed! Skipping...");
+                    failedMsgs.emplace_back(msg);
+                    continue;
+                }
+
+                log(IS_VERBOSE, "Delete Message failed! Please try again later.");
+                return REMOVER_STATUS::DELETE_MESSAGE_FAILED;
+            }
         }
     } while (!messages["messages"].empty()); // While loop to remove all pages
 

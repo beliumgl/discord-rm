@@ -76,14 +76,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    REMOVER_STATUS status = discordRM(IS_VERBOSE,
-                                      IS_DEBUG,
-                                      DELETE_DELAY_IN_SECONDS,
-                                      DELETE_DELAY_IN_SECONDS_DEFAULT,
-                                      DISCORD_TOKEN,
-                                      GUILD_ID,
-                                      CHANNEL_ID,
-                                      SENDER_ID);
+    REMOVER_STATUS status = discordRM();
 
     if (status != REMOVER_STATUS::OK)
         log(IS_VERBOSE, "Failed to remove messages.");
