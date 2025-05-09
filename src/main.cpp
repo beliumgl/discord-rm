@@ -15,12 +15,12 @@
 #include <stdexcept>
 
 void InteractiveSession() {
-    bool isVerbose, isDebug;
+    bool isVerbose = false, isDebug = false;
     std::string verboseInput, debugInput, guildID, channelID, senderID;
 
-    ask("Show verbose output? [y/n]: ", verboseInput);
-    ask("Show debug output (use only for developing)? [y/n]: ", debugInput);
-    input("Enter guild ID (or '@me' for DM): ", guildID);
+    ask("Enable verbose output? [y/n]: ", verboseInput);
+    ask("Enable debug output (intended for development)? [y/n]: ", debugInput);
+    input("Enter guild ID (or '@me' for DMs): ", guildID);
     input("Enter channel ID: ", channelID);
     input("Enter sender ID: ", senderID);
 
@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
      *
      * Currently, with echoing, but I may fix this later.
      */
-    input("Enter your discord token: ", DISCORD_TOKEN);
+    input("Enter your Discord token: ", DISCORD_TOKEN);
 
     if (DISCORD_TOKEN.empty())
         throw std::invalid_argument("Discord token is required for authorization.");
@@ -64,14 +64,14 @@ int main(int argc, char** argv) {
     if (IS_INTERACTIVE)
         InteractiveSession();
 
-    std::cout << "\nWARNING: Your account might get terminated for `self-bot`." << '\n';
+    std::cout << "\nWARNING: Using self-bots may result in account termination.\n";
 
     if (!IS_NOCONFIRM) {
         std::string in;
-        ask("Do you still want to proceed? [y/n]: ", in);
+        ask("Do you want to continue? [y/n]: ", in);
 
-        if (parseInput(in) == false) {
-            log(IS_VERBOSE, "Exiting...");
+        if (!parseInput(in)) {
+            log(IS_VERBOSE, "Aborting operation.");
             return 0;
         }
     }
