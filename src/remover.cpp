@@ -30,12 +30,8 @@ struct Message {
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(Message, ID, type);
 };
 
-json search() {
-    debug(IS_DEBUG, std::string("[Search] Parameters: IS_VERBOSE = ")
-        + (IS_VERBOSE ? "true" : "false") + ", IS_DEBUG = "
-        + (IS_DEBUG ? "true" : "false") + ", GUILD_ID = "
-        + GUILD_ID + ", CHANNEL_ID = "
-        + CHANNEL_ID + ", SENDER_ID = " + SENDER_ID);
+json search(unsigned short offset) {
+    debug(IS_DEBUG, std::string("[Search] Parameters: offset = " + std::to_string(offset)));
     log(IS_VERBOSE, "Search: Making API URL...");
     std::string apiURL = isDMGuild(GUILD_ID)
                             ? "https://discord.com/api/v9/channels/" + CHANNEL_ID + "/messages/"
@@ -43,7 +39,8 @@ json search() {
 
     std::vector<Query> params = {
         {"author_id", SENDER_ID},
-        {"channel_id", (isDMGuild(GUILD_ID) ? CHANNEL_ID : "")}
+        {"channel_id", (isDMGuild(GUILD_ID) ? CHANNEL_ID : "")},
+        {"offset", std::to_string(offset)},
     };
 
     log(IS_VERBOSE, "Search: Making request parameters...");
@@ -81,15 +78,11 @@ json search() {
 }
 
 void deleteMessage(const Message& message) {
-    debug(IS_DEBUG, std::string("[Delete Message] Parameters: IS_VERBOSE = ")
-        + (IS_VERBOSE ? "true" : "false") + ", IS_DEBUG = "
-        + (IS_DEBUG ? "true" : "false")  + ", DELETE_DELAY_IN_SECONDS = "
-        + std::to_string(DELETE_DELAY_IN_SECONDS) + "s, DELETE_DELAY_IN_SECONDS_DEFAULT = "
-        + std::to_string(DELETE_DELAY_IN_SECONDS_DEFAULT) + ", message (ID) = " + message.ID);
+    debug(IS_DEBUG, std::string("[Delete Message] Parameters: Message (ID) = " + message.ID));
 
     using json = nlohmann::json;
 
-    if ((message.type < 6 || message.type > 21) && message.type != 0) {
+    if (isSystemMessage(message.type)) {
         log(IS_VERBOSE, "Delete Message: System message. Skipping...");
         return; // Cannot remove system message
     }
@@ -160,21 +153,22 @@ void deleteMessage(const Message& message) {
 
 REMOVER_STATUS discordRM() {
     log(IS_VERBOSE, "Remover: Searching for messages to delete...");
+
+    unsigned short offset = 0;
     std::vector<Message> failedMsgs;
     json messages;
-    do {
+
+    while (true) { // While loop to remove all pages
         try {
-            messages = search();
+            messages = search(offset);
             debug(IS_DEBUG, std::string("Messages [JSON]:\n") + messages.dump());
         } catch (...) {
             log(IS_VERBOSE, "Remover: Search failed! Try again later.");
             return REMOVER_STATUS::SEARCH_FAILED;
         }
 
-        if (messages["messages"].empty()) { // fix infinite loop
-            log(IS_VERBOSE, "Remover: All messages have been removed.");
+        if (messages["messages"].empty()) // fix infinite loop
             break;
-        }
 
         // Parse Messages
         log(IS_VERBOSE, "Remover: Parsing the messages...");
@@ -186,10 +180,17 @@ REMOVER_STATUS discordRM() {
                     m.ID = msg["id"].get<std::string>();
                     m.CHANNEL_ID = CHANNEL_ID;
                     m.type = msg["type"].get<int>();
+
+                    if (isSystemMessage(m.type))
+                        continue;
+
                     msgs.push_back(m);
                 }
             }
         }
+
+        if (msgs.empty()) // If empty, switch to the next page
+            ++offset;
 
         if (!msgs.empty() && msgs.size() == failedMsgs.size() && IS_SKIP_IF_FAIL) { // Exit if only failed messages remain
             std::unordered_set<std::string> failedIDs;
@@ -219,7 +220,7 @@ REMOVER_STATUS discordRM() {
                 return REMOVER_STATUS::DELETE_MESSAGE_FAILED;
             }
         }
-    } while (!messages["messages"].empty()); // While loop to remove all pages
+    }
 
     return REMOVER_STATUS::OK;
 }

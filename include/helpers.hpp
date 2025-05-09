@@ -50,6 +50,8 @@ inline void debug(bool isDebug, const std::string_view& msg) { // Rename for `lo
     log(isDebug, msg);
 }
 
+inline bool isSystemMessage(int type) { return (type < 6 || type > 21) && type != 0; }
+
 size_t writeCallback(void* contents, size_t size, size_t nmemb, void* userp);
 std::string urlEncode(const std::string& value);
 std::string buildQueryString(const std::vector<Query>& params);
