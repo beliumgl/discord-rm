@@ -20,3 +20,4 @@ extern std::string GUILD_ID;
 extern std::string CHANNEL_ID;
 extern unsigned int DELETE_DELAY_IN_SECONDS;
 constexpr unsigned int DELETE_DELAY_IN_SECONDS_DEFAULT = 1;
+constexpr unsigned short PAGE_LIMIT                    = 25;

@@ -39,8 +39,9 @@ json search(unsigned short offset) {
 
     std::vector<Query> params = {
         {"author_id", SENDER_ID},
-        {"channel_id", (isDMGuild(GUILD_ID) ? CHANNEL_ID : "")},
+        {"channel_id", CHANNEL_ID},
         {"offset", std::to_string(offset)},
+        {"limit", std::to_string(PAGE_LIMIT)}
     };
 
     log(IS_VERBOSE, "Search: Making request parameters...");
@@ -155,7 +156,6 @@ REMOVER_STATUS discordRM() {
     log(IS_VERBOSE, "Remover: Searching for messages to delete...");
 
     unsigned short offset = 0;
-    std::vector<Message> failedMsgs;
     json messages;
 
     while (true) { // While loop to remove all pages
@@ -163,16 +163,14 @@ REMOVER_STATUS discordRM() {
             messages = search(offset);
             debug(IS_DEBUG, std::string("Messages [JSON]:\n") + messages.dump());
         } catch (...) {
-            log(IS_VERBOSE, "Remover: Search failed! Try again later.");
+            log(IS_VERBOSE, "Search failed! Try again later.");
             return REMOVER_STATUS::SEARCH_FAILED;
         }
-
-        if (messages["messages"].empty()) // fix infinite loop
-            break;
 
         // Parse Messages
         log(IS_VERBOSE, "Remover: Parsing the messages...");
         std::vector<Message> msgs;
+        unsigned char skippedMessages = 0;
         for (const auto& group : messages["messages"]) {
             for (const auto& msg : group) {
                 if (msg.contains("id")) {
@@ -181,38 +179,34 @@ REMOVER_STATUS discordRM() {
                     m.CHANNEL_ID = CHANNEL_ID;
                     m.type = msg["type"].get<int>();
 
-                    if (isSystemMessage(m.type))
+                    if (isSystemMessage(m.type)) {
+                        ++skippedMessages;
                         continue;
+                    }
 
                     msgs.push_back(m);
                 }
             }
         }
 
-        if (msgs.empty()) // If empty, switch to the next page
-            ++offset;
+        if (messages["total_results"].get<int>() - skippedMessages <= 0) break; // If total_results (without system messages) is zero, then no messages remain to delete
 
-        if (!msgs.empty() && msgs.size() == failedMsgs.size() && IS_SKIP_IF_FAIL) { // Exit if only failed messages remain
-            std::unordered_set<std::string> failedIDs;
-            for (const auto& m : failedMsgs) failedIDs.insert(m.ID);
-
-            if (std::all_of(msgs.begin(), msgs.end(), [&](const Message& m) {
-                return failedIDs.count(m.ID) > 0;
-            })) {
-                log(IS_VERBOSE, "Remover: Only failed messages remain. Exiting...");
-                break;
-            }
+        if (msgs.empty() && skippedMessages == 0) {
+            offset += PAGE_LIMIT - offset; // Offset to the next page, not just by the page size
+            continue;
+        }
+        else if (msgs.empty() && skippedMessages > 0) {
+            offset += skippedMessages;
+            continue;
         }
 
-        Message currentMsg;
-        for (const auto& msg : msgs) {
+        for (const auto& msg: msgs) {
             try {
                 std::this_thread::sleep_for(std::chrono::seconds(DELETE_DELAY_IN_SECONDS)); // Delay to not hit rate limit
                 deleteMessage(msg);
             } catch (...) {
                 if (IS_SKIP_IF_FAIL) {
                     log(IS_VERBOSE, "Delete Message failed! Skipping...");
-                    failedMsgs.emplace_back(msg);
                     continue;
                 }
 
