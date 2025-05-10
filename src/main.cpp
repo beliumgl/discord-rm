@@ -78,11 +78,12 @@ int main(int argc, char** argv) {
 
     REMOVER_STATUS status = discordRM();
 
-    if (status != REMOVER_STATUS::OK)
+    if (status != REMOVER_STATUS::OK) {
         std::cout << "Failed to remove messages." << '\n';
-    else
-        std::cout << "All messages have been removed." << '\n';
+        return 1;
+    }
 
-    return status == REMOVER_STATUS::OK ? 0 : 1;
+    std::cout << "All messages have been removed." << '\n';
+    return 0;
 }
 
