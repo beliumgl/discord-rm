@@ -17,4 +17,3 @@ bool         IS_SKIP_IF_FAIL = false;
 std::string  SENDER_ID;
 std::string  GUILD_ID;
 std::string  CHANNEL_ID;
-unsigned int DELETE_DELAY_IN_SECONDS = DELETE_DELAY_IN_SECONDS_DEFAULT;

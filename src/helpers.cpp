@@ -7,6 +7,7 @@
  */
 
 #include <include/helpers.hpp>
+#include <curl/curl.h>
 #include <cstddef>
 #include <string>
 #include <sstream>
@@ -14,7 +15,6 @@
 #include <vector>
 #include <utility>
 #include <cctype>
-#include <regex>
 
 size_t writeCallback(void* contents, size_t size, size_t nmemb, void* userp) {
     /*
@@ -58,4 +58,23 @@ std::string buildQueryString(const std::vector<Query>& params) {
         }
     }
     return oss.str();
+}
+
+std::pair<CURL*, CURLcode> sendRequest(std::string& response,
+                                       const std::string& _headers,
+                                       const std::string& url,
+                                       const std::string& method) {
+    CURL* curl = curl_easy_init();
+    if (!curl) throw std::runtime_error("Failed to send request.");
+    struct curl_slist* headers = nullptr;
+    headers = curl_slist_append(headers, _headers.c_str());
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, method.c_str());
+    CURLcode result = curl_easy_perform(curl);
+    curl_slist_free_all(headers);
+
+    return {curl, result};
 }

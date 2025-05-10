@@ -29,12 +29,18 @@ struct Message {
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(Message, ID, type);
 };
 
+const std::string DISCORD_API_URL_BASE = "https://discord.com/api/";
+const std::string DISCORD_API_VERSION = "v9";
+const std::string DISCORD_API_AUTHORIZATION_KEY = "Authorization: ";
+const std::string CURL_GET_METHOD = "GET";
+const std::string CURL_DELETE_METHOD = "DELETE";
+
 json search(unsigned short offset) {
     debug(IS_DEBUG, std::string("[Search] Parameters: offset = " + std::to_string(offset)));
     log(IS_VERBOSE, "Search: Making API URL...");
     std::string apiURL = isDMGuild(GUILD_ID)
-                            ? "https://discord.com/api/v9/channels/" + CHANNEL_ID + "/messages/"
-                            : "https://discord.com/api/v9/guilds/" + GUILD_ID + "/messages/";
+                            ? DISCORD_API_URL_BASE + DISCORD_API_VERSION + "/channels/" + CHANNEL_ID + "/messages/"
+                            : DISCORD_API_URL_BASE + DISCORD_API_VERSION + "/guilds/" + GUILD_ID + "/messages/";
 
     std::vector<Query> params = {
         {"author_id", SENDER_ID},
@@ -46,41 +52,41 @@ json search(unsigned short offset) {
     log(IS_VERBOSE, "Search: Making request parameters...");
     std::string query = buildQueryString(params);
     debug(IS_DEBUG, "Query Parameters: " + query);
+
     log(IS_VERBOSE, "Search: Making full API URL...");
     std::string url = apiURL + "search?" + query;
     debug(IS_DEBUG, "Full URL: " + url);
 
     log(IS_VERBOSE, "Search: Sending request...");
-    CURL* curl = curl_easy_init();
-
-    if (!curl)
-        throw std::runtime_error("Failed to send search request.");
-
     std::string response;
-    struct curl_slist* headers = nullptr;
-    std::string authHeader = "Authorization: " + DISCORD_TOKEN;
-    headers = curl_slist_append(headers, authHeader.c_str());
+    std::string authHeader = DISCORD_API_AUTHORIZATION_KEY + DISCORD_TOKEN;
 
-    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+    auto [curl, result] = sendRequest(response, authHeader, url, CURL_GET_METHOD);
 
-    CURLcode result = curl_easy_perform(curl);
     if (result != CURLE_OK)
         throw std::runtime_error("Failed to send search request.");
     debug(IS_DEBUG, "Response: " + response);
 
-    curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
 
-    return json::parse(response);
+    json jsonResponse = json::parse(response);
+
+    if (jsonResponse.contains("retry_after")) { // Rate limited by discord
+        log(IS_VERBOSE, "Search: Rate limited by Discord API! Trying again later...");
+        handleRateLimit(jsonResponse);
+        log(IS_VERBOSE, "Search: Retrying...");
+        jsonResponse = search(offset); // Retry
+    }
+
+    return jsonResponse;
 }
 
 void deleteMessage(const Message& message) {
-    debug(IS_DEBUG, std::string("[Delete Message] Parameters: Message (ID) = " + message.ID));
-
+    constexpr long RATE_LIMITED_HTTP_CODE = 429;
+    constexpr unsigned int ARCHIVED_THREAD_CODE = 50083;
     using json = nlohmann::json;
+
+    debug(IS_DEBUG, std::string("[Delete Message] Parameters: Message (ID) = " + message.ID));
 
     if (isSystemMessage(message.type)) {
         log(IS_VERBOSE, "Delete Message: System message. Skipping...");
@@ -88,30 +94,17 @@ void deleteMessage(const Message& message) {
     }
 
     log(IS_VERBOSE, "Delete Message: Making API URL...");
-    std::string deleteAPIURL = "https://discord.com/api/v9/channels/" + message.CHANNEL_ID + "/messages/" + message.ID;
+    std::string deleteAPIURL = DISCORD_API_URL_BASE + DISCORD_API_VERSION + "/channels/" + message.CHANNEL_ID + "/messages/" + message.ID;
     debug(IS_DEBUG, "Full URL: " + deleteAPIURL);
 
     log(IS_VERBOSE, "Delete Message: Sending request...");
-    CURL* curl = curl_easy_init();
-    if (!curl)
-        throw std::runtime_error("Failed to send delete message request.");
-
     std::string response;
-    struct curl_slist* headers = nullptr;
-    std::string authHeader = "Authorization: " + DISCORD_TOKEN;
-    headers = curl_slist_append(headers, authHeader.c_str());
+    std::string authHeader = DISCORD_API_AUTHORIZATION_KEY + DISCORD_TOKEN;
 
-    curl_easy_setopt(curl, CURLOPT_URL, deleteAPIURL.c_str());
-    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
-
-    CURLcode result = curl_easy_perform(curl);
+    auto [curl, result] = sendRequest(response, authHeader, deleteAPIURL, CURL_DELETE_METHOD);
     long httpCode = 0;
 
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
-    curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
 
     debug(IS_DEBUG, "Response: " + response + ", Code: " + std::to_string(httpCode));
@@ -119,32 +112,35 @@ void deleteMessage(const Message& message) {
     if (result != CURLE_OK)
         throw std::runtime_error("Failed to send delete message request.");
 
-    if (httpCode == 429) { // Rate limited by Discord API
-        if (!response.empty()) {
-            try {
-                json j = json::parse(response);
-                log(IS_VERBOSE, "Delete Message: Rate limited by Discord API! Trying again later...");
-                DELETE_DELAY_IN_SECONDS = static_cast<unsigned int>(j["retry_after"].get<double>());
-                std::this_thread::sleep_for(std::chrono::seconds(DELETE_DELAY_IN_SECONDS * 2)); // Wait twice as long to ensure not hit rate limit again
-                DELETE_DELAY_IN_SECONDS = DELETE_DELAY_IN_SECONDS_DEFAULT; // Reset back
-                return;
-            } catch (...) {
-                throw std::runtime_error("Failed to parse rate limit JSON.");
-            }
-        } else {
+    if (httpCode == RATE_LIMITED_HTTP_CODE) { // Rate limited by Discord API
+        if (response.empty()) {
             throw std::runtime_error("Failed to parse rate limit JSON.");
         }
-    } else if (httpCode == 400 && !response.empty()) {
+
         try {
             json j = json::parse(response);
-            if (j.contains("code") && j["code"] == 50083) {
+            log(IS_VERBOSE, "Delete Message: Rate limited by Discord API! Trying again later...");
+            handleRateLimit(j);
+            log(IS_VERBOSE, "Delete Message: Retrying...");
+            deleteMessage(message); // Retry
+        } catch (...) {
+            throw std::runtime_error("Failed to parse rate limit JSON.");
+        }
+    }
+
+    if (httpCode == 400 && !response.empty()) {
+        try {
+            json j = json::parse(response);
+            if (j.contains("code") && j["code"] == ARCHIVED_THREAD_CODE) {
                 log(IS_VERBOSE, "Delete Message: Cannot remove archived thread. Skipping...");
                 return;
             }
         } catch (...) {
             throw std::runtime_error("Failed to parse error JSON.");
         }
-    } else if (httpCode < 200 || httpCode >= 300) {
+    }
+
+    if (httpCode < 200 || httpCode >= 300) {
         throw std::runtime_error("Failed to delete message request.");
     }
 
@@ -158,7 +154,7 @@ REMOVER_STATUS discordRM() {
     json messages;
 
     while (true) { // While loop to remove all pages
-        std::this_thread::sleep_for(std::chrono::seconds(DELETE_DELAY_IN_SECONDS)); // Delay to not hit rate limit
+        std::this_thread::sleep_for(std::chrono::seconds(DELAY_IN_SECONDS_DEFAULT)); // Delay to not hit rate limit
         try {
             messages = search(offset);
             debug(IS_DEBUG, std::string("Messages [JSON]:\n") + messages.dump());
@@ -179,16 +175,17 @@ REMOVER_STATUS discordRM() {
         for (const auto& group : messages["messages"]) {
             for (const auto& msg : group) {
                 if (msg.contains("id")) {
-                    Message m;
-                    m.ID = msg["id"].get<std::string>();
-                    m.CHANNEL_ID = CHANNEL_ID;
-                    m.type = msg["type"].get<int>();
+                    int type = msg["type"].get<int>();
 
-                    if (isSystemMessage(m.type)) {
+                    if (isSystemMessage(type)) {
                         ++skippedMessages;
                         continue;
                     }
 
+                    Message m;
+                    m.ID = msg["id"].get<std::string>();
+                    m.CHANNEL_ID = CHANNEL_ID;
+                    m.type = type;
                     msgs.push_back(m);
                 }
             }
@@ -208,7 +205,7 @@ REMOVER_STATUS discordRM() {
 
         for (const auto& msg: msgs) {
             try {
-                std::this_thread::sleep_for(std::chrono::seconds(DELETE_DELAY_IN_SECONDS)); // Delay to not hit rate limit
+                std::this_thread::sleep_for(std::chrono::seconds(DELAY_IN_SECONDS_DEFAULT)); // Delay to not hit rate limit
                 deleteMessage(msg);
             } catch (...) {
                 if (IS_SKIP_IF_FAIL) {

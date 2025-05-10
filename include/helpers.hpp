@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include "json.hpp"
+#include <curl/curl.h>
 #include <utility>
 #include <string>
 #include <string_view>
@@ -15,6 +17,7 @@
 #include <cctype>
 #include <iostream>
 #include <vector>
+#include <thread>
 
 using Query = std::pair<std::string, std::string>;
 
@@ -52,6 +55,17 @@ inline void debug(bool isDebug, const std::string_view& msg) { // Rename for `lo
 
 inline bool isSystemMessage(int type) { return (type < 6 || type > 21) && type != 0; }
 
+inline void handleRateLimit(nlohmann::json response) {
+    constexpr unsigned int DELAY_MULTIPLIER = 2;
+
+    unsigned int newDelay = static_cast<unsigned int>(response["retry_after"].get<double>());
+    std::this_thread::sleep_for(std::chrono::seconds(newDelay * DELAY_MULTIPLIER)); // Wait a little longer to ensure not hit rate limit again
+}
+
 size_t writeCallback(void* contents, size_t size, size_t nmemb, void* userp);
 std::string urlEncode(const std::string& value);
 std::string buildQueryString(const std::vector<Query>& params);
+std::pair<CURL*, CURLcode> sendRequest(std::string& response,
+                                       const std::string& _headers,
+                                       const std::string& url,
+                                       const std::string& method);
