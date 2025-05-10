@@ -12,12 +12,11 @@
 #include <include/json.hpp>
 #include <curl/curl.h>
 #include <string>
-#include <utility>
 #include <vector>
 #include <stdexcept>
 #include <chrono>
 #include <thread>
-#include <unordered_set>
+#include <utility>
 
 using nlohmann::json;
 using Query = std::pair<std::string, std::string>;
@@ -156,13 +155,20 @@ REMOVER_STATUS discordRM() {
     log(IS_VERBOSE, "Remover: Searching for messages to delete...");
 
     unsigned short offset = 0;
+    unsigned int totalSkippedMessages = 0;
     json messages;
 
     while (true) { // While loop to remove all pages
+        std::this_thread::sleep_for(std::chrono::seconds(DELETE_DELAY_IN_SECONDS)); // Delay to not hit rate limit
         try {
             messages = search(offset);
             debug(IS_DEBUG, std::string("Messages [JSON]:\n") + messages.dump());
         } catch (...) {
+            if (IS_SKIP_IF_FAIL) {
+                log(IS_VERBOSE, "Search failed! Skipping...");
+                continue;
+            }
+
             log(IS_VERBOSE, "Search failed! Try again later.");
             return REMOVER_STATUS::SEARCH_FAILED;
         }
@@ -189,10 +195,13 @@ REMOVER_STATUS discordRM() {
             }
         }
 
-        if (messages["total_results"].get<int>() - skippedMessages <= 0) break; // If total_results (without system messages) is zero, then no messages remain to delete
+        totalSkippedMessages += skippedMessages;
+
+        if (msgs.empty() && messages["total_results"].get<int>() <= 0) break; // If messages are empty and total is 0, then no messages remain to delete
+        if (msgs.empty() && messages["total_results"].get<int>() - totalSkippedMessages <= 0) break; // If total_results (without system messages) is zero, then no messages remain to delete
 
         if (msgs.empty() && skippedMessages == 0) {
-            offset += PAGE_LIMIT - offset; // Offset to the next page, not just by the page size
+            offset = 0; // Reset back to first page
             continue;
         }
         else if (msgs.empty() && skippedMessages > 0) {
