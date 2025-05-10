@@ -17,6 +17,7 @@
 #include <chrono>
 #include <thread>
 #include <utility>
+#include <unordered_set>
 
 using nlohmann::json;
 using Query = std::pair<std::string, std::string>;
@@ -26,8 +27,26 @@ struct Message {
     std::string ID;
     int type;
 
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(Message, ID, type);
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(Message, ID, type, CHANNEL_ID);
+
+    bool operator==(const Message& other) const { // Required for unordered_set
+        return ID == other.ID &&
+        type == other.type &&
+        CHANNEL_ID == other.CHANNEL_ID;
+    }
 };
+
+namespace std {
+    template <>
+    struct hash<Message> { // Required for unordered_set
+        std::size_t operator()(const Message& m) const noexcept {
+            std::size_t h1 = std::hash<std::string>{}(m.ID);
+            std::size_t h2 = std::hash<int>{}(m.type);
+            std::size_t h3 = std::hash<std::string>{}(m.CHANNEL_ID);
+            return h1 ^ (h2 << 1) ^ (h3 << 2);
+        }
+    };
+}
 
 const std::string DISCORD_API_URL_BASE = "https://discord.com/api/";
 const std::string DISCORD_API_VERSION = "v9";
@@ -151,6 +170,7 @@ REMOVER_STATUS discordRM() {
     log(IS_VERBOSE, "Remover: Searching for messages to delete...");
 
     unsigned short offset = 0;
+    std::unordered_set<Message> skippedMessagesSet; // fix infinite loop (maybe, finally???)
     json messages;
 
     while (true) { // While loop to remove all pages
@@ -175,24 +195,24 @@ REMOVER_STATUS discordRM() {
         for (const auto& group : messages["messages"]) {
             for (const auto& msg : group) {
                 if (msg.contains("id")) {
-                    int type = msg["type"].get<int>();
-
-                    if (isSystemMessage(type)) {
-                        ++skippedMessages;
-                        continue;
-                    }
-
                     Message m;
                     m.ID = msg["id"].get<std::string>();
                     m.CHANNEL_ID = CHANNEL_ID;
-                    m.type = type;
+                    m.type = msg["type"].get<int>();
+
+                    if (isSystemMessage(m.type)) {
+                        ++skippedMessages;
+                        skippedMessagesSet.insert(m); // Insert only if the element does not already exist
+                        continue;
+                    }
+
                     msgs.push_back(m);
                 }
             }
         }
 
         if (msgs.empty() && messages["total_results"].get<int>() <= 0) break; // If messages are empty and total is 0, then no messages remain to delete
-        if (msgs.empty() && skippedMessages > 0 && messages["total_results"].get<int>() <= skippedMessages) break; // If total_results are system messages, then no messages remain to delete
+        if (msgs.empty() && skippedMessages > 0 && skippedMessagesSet.size() >= messages["total_results"].get<int>()) break; // If total_results are system messages, then no messages remain to delete
 
         if (msgs.empty() && skippedMessages == 0) {
             offset = 0; // Reset back to first page
