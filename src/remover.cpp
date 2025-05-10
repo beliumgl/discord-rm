@@ -155,7 +155,6 @@ REMOVER_STATUS discordRM() {
     log(IS_VERBOSE, "Remover: Searching for messages to delete...");
 
     unsigned short offset = 0;
-    unsigned int totalSkippedMessages = 0;
     json messages;
 
     while (true) { // While loop to remove all pages
@@ -195,10 +194,8 @@ REMOVER_STATUS discordRM() {
             }
         }
 
-        totalSkippedMessages += skippedMessages;
-
         if (msgs.empty() && messages["total_results"].get<int>() <= 0) break; // If messages are empty and total is 0, then no messages remain to delete
-        if (msgs.empty() && messages["total_results"].get<int>() - totalSkippedMessages <= 0) break; // If total_results (without system messages) is zero, then no messages remain to delete
+        if (msgs.empty() && skippedMessages > 0 && messages["total_results"].get<int>() <= skippedMessages) break; // If total_results are system messages, then no messages remain to delete
 
         if (msgs.empty() && skippedMessages == 0) {
             offset = 0; // Reset back to first page
