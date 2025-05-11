@@ -9,7 +9,7 @@
 #include <include/remover.hpp>
 #include <include/helpers.hpp>
 #include <include/config.hpp>
-#include <include/json.hpp>
+#include <nlohmann/json.hpp>
 #include <curl/curl.h>
 #include <string>
 #include <vector>

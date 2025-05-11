@@ -8,8 +8,9 @@
 
 #pragma once
 
-#include "json.hpp"
+#include <nlohmann/json.hpp>
 #include <curl/curl.h>
+#include <fmt/base.h>
 #include <utility>
 #include <string>
 #include <string_view>
@@ -30,11 +31,11 @@ inline std::string formatString(const std::string_view& s) {
     return str;
 }
 
-inline bool isDMGuild(const std::string_view& guildID) { return guildID == "@me"; };
-inline bool parseInput(const std::string_view& in) { return formatString(in) == "y" || in == "Y"; };
+inline bool isDMGuild(const std::string_view& guildID) { return guildID == "@me"; }
+inline bool parseInput(const std::string_view& in) { return formatString(in) == "y" || in == "Y"; }
 
 inline void ask(const std::string_view& question, std::string& save) {
-    std::cout << question;
+    fmt::print("{}", question);
     std::cin >> save;
 }
 
@@ -46,7 +47,7 @@ inline void log(bool isVerbose, const std::string_view& msg) {
     if (!isVerbose)
         return;
 
-    std::cout << msg << '\n';
+    fmt::print("{}\n", msg);
 }
 
 inline void debug(bool isDebug, const std::string_view& msg) { // Rename for `log` function
