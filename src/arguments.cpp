@@ -13,7 +13,7 @@
 argparse::ArgumentParser& createArguments() {
     using namespace argparse;
 
-    static ArgumentParser program("discord-rm");
+    static ArgumentParser program("discord-rm", "1.1");
     program.add_argument("-v", "--verbose")
         .help("Verbose output")
         .default_value(false)

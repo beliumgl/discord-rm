@@ -10,7 +10,7 @@
 #include <include/config.hpp>
 #include <include/remover.hpp>
 #include <include/helpers.hpp>
-#include <iostream>
+#include <fmt/base.h>
 #include <string>
 #include <stdexcept>
 
@@ -43,9 +43,9 @@ void InteractiveSession() {
 }
 
 int main(int argc, char** argv) {
-    std::cout << "discord-rm" << '\n';
-    std::cout << "CLI removal tool for Discord chats, using an authorization token and the Discord API." << '\n';
-    std::cout << "By beliumgl.\n" << '\n';
+    fmt::print("discord-rm\n");
+    fmt::print("CLI removal tool for Discord chats, using an authorization token and the Discord API.\n");
+    fmt::print("By beliumgl.\n\n");
 
     auto& args = createArguments();
     processArguments(args, argc, argv);
@@ -64,14 +64,14 @@ int main(int argc, char** argv) {
     if (IS_INTERACTIVE)
         InteractiveSession();
 
-    std::cout << "\nWARNING: Using self-bots may result in account termination.\n" << '\n';
+    fmt::print("\nWARNING: Using self-bots may result in account termination.\n\n");
 
     if (!IS_NOCONFIRM) {
         std::string in;
         ask("Do you want to continue? [y/n]: ", in);
 
         if (!parseInput(in)) {
-            std::cout << "Aborting operation." << '\n';
+            fmt::print("Aborting operation.\n");
             return 0;
         }
     }
@@ -79,11 +79,10 @@ int main(int argc, char** argv) {
     REMOVER_STATUS status = discordRM();
 
     if (status != REMOVER_STATUS::OK) {
-        std::cout << "Failed to remove messages." << '\n';
+        fmt::print("Failed to remove messages.\n");
         return 1;
     }
 
-    std::cout << "All messages have been removed." << '\n';
+    fmt::print("All messages have been removed.\n");
     return 0;
 }
-
