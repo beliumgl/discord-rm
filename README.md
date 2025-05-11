@@ -29,10 +29,10 @@ This tool utilizes [ArgParse](https://github.com/p-ranav/argparse) for command-l
 
 ## 📦 Dependencies
 
-The following dependencies are included in the repository:
-
-* [ArgParse](https://github.com/p-ranav/argparse)
+* [p-ranav/ArgParse](https://github.com/p-ranav/argparse)
 * [nlohmann/json](https://github.com/nlohmann/json)
+* [curl/curl](https://github.com/curl/curl)
+* [fmtlib/fmt](https://github.com/fmtlib/fmt)
 
 ---
 
