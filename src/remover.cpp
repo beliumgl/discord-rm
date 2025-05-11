@@ -49,7 +49,7 @@ namespace std {
 }
 
 const std::string DISCORD_API_URL_BASE = "https://discord.com/api/";
-const std::string DISCORD_API_VERSION = "v9";
+const std::string DISCORD_API_VERSION = "v10";
 const std::string DISCORD_API_AUTHORIZATION_KEY = "Authorization: ";
 const std::string CURL_GET_METHOD = "GET";
 const std::string CURL_DELETE_METHOD = "DELETE";
