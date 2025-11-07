@@ -31,7 +31,7 @@ const std::string CURL_DELETE_METHOD = "DELETE";
 struct Message {
     std::string channel_id;
     std::string id;
-    int type;
+    int type{};
 
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(Message, id, type, channel_id);
 
@@ -42,21 +42,19 @@ struct Message {
     }
 };
 
-namespace std {
-    template<> struct hash<Message> // Required for unordered_set
-    {
-        std::size_t operator()(const Message& m) const noexcept {
-            std::size_t h1 = std::hash<std::string>{}(m.id);
-            std::size_t h2 = std::hash<int>{}(m.type);
-            std::size_t h3 = std::hash<std::string>{}(m.channel_id);
-            return h1 ^ (h2 << 1) ^ (h3 << 2);
-        }
-    };
-}
+template<> struct std::hash<Message> // Required for unordered_set
+{
+    std::size_t operator()(const Message& m) const noexcept {
+        std::size_t h1 = std::hash<std::string>{}(m.id);
+        std::size_t h2 = std::hash<int>{}(m.type);
+        std::size_t h3 = std::hash<std::string>{}(m.channel_id);
+        return h1 ^ (h2 << 1) ^ (h3 << 2);
+    }
+};
 
-json search(unsigned short offset) {
+json search(const unsigned short offset) {
     debug(IS_DEBUG, std::string("[Search] Parameters: offset = " + std::to_string(offset)));
-    std::string api_url = is_dm_guild(GUILD_ID)
+    const std::string api_url = is_dm_guild(GUILD_ID)
                             ? DISCORD_API_URL_BASE + DISCORD_API_VERSION + "/channels/" + CHANNEL_ID + "/messages/"
                             : DISCORD_API_URL_BASE + DISCORD_API_VERSION + "/guilds/" + GUILD_ID + "/messages/";
 
@@ -67,10 +65,11 @@ json search(unsigned short offset) {
         {"limit", std::to_string(PAGE_LIMIT)}
     };
 
-    std::string query = build_query_string(params), response, auth_header = DISCORD_API_AUTHORIZATION_KEY + DISCORD_TOKEN;;
+    const std::string query = build_query_string(params);
+    std::string response, auth_header = DISCORD_API_AUTHORIZATION_KEY + DISCORD_TOKEN;;
     debug(IS_DEBUG, "Query Parameters: " + query);
 
-    std::string url = api_url + "search?" + query;
+    const std::string url = api_url + "search?" + query;
     debug(IS_DEBUG, "Full URL: " + url);
 
     log(IS_VERBOSE, "Search: Sending request...");
@@ -95,8 +94,8 @@ json search(unsigned short offset) {
 }
 
 void delete_message(const Message& message) {
-    constexpr long RATE_LIMITED_HTTP_CODE = 429;
-    constexpr unsigned int ARCHIVED_THREAD_CODE = 50083;
+    constexpr unsigned short RATE_LIMITED_HTTP_CODE = 429;
+    constexpr unsigned short ARCHIVED_THREAD_CODE = 50083;
 
     debug(IS_DEBUG, std::string("[Delete Message] Parameters: Message (ID) = " + message.id));
 
@@ -105,8 +104,9 @@ void delete_message(const Message& message) {
         return; // Cannot remove system message
     }
 
-    std::string delete_api_url = DISCORD_API_URL_BASE + DISCORD_API_VERSION + "/channels/" + message.channel_id + "/messages/" + message.id;
-    std::string response, auth_header = DISCORD_API_AUTHORIZATION_KEY + DISCORD_TOKEN;
+    const std::string delete_api_url = DISCORD_API_URL_BASE + DISCORD_API_VERSION + "/channels/" + message.channel_id + "/messages/" + message.id;
+    const std::string auth_header = DISCORD_API_AUTHORIZATION_KEY + DISCORD_TOKEN;
+    std::string response;
     debug(IS_DEBUG, "Full URL: " + delete_api_url);
 
     log(IS_VERBOSE, "Delete Message: Sending request...");
@@ -123,7 +123,7 @@ void delete_message(const Message& message) {
 
     if (http_code == RATE_LIMITED_HTTP_CODE) { // Rate limited by Discord API
         try {
-            json j = json::parse(response);
+            const json j = json::parse(response);
             log(IS_VERBOSE, "Delete Message: Rate limited by Discord API! Trying again later...");
             handle_rate_limit(j);
             log(IS_VERBOSE, "Delete Message: Retrying...");
@@ -174,7 +174,7 @@ void discord_rm() {
             throw std::runtime_error("Search failed! Try again later.");
         }
 
-        int total_results = messages["total_results"].get<int>();
+        const unsigned int total_results = messages["total_results"].get<int>();
 
         // Parse Messages
         log(IS_VERBOSE, "Remover: Parsing the messages...");
@@ -200,7 +200,7 @@ void discord_rm() {
             }
         }
 
-        size_t skipped_messages_set_size = skipped_messages_set.size();
+        const size_t skipped_messages_set_size = skipped_messages_set.size();
         if (msgs.empty() && total_results <= skipped_messages_set_size) break; // If total_results are system messages, then no messages remain to delete
 
         if (msgs.empty() && total_results > skipped_messages_set_size) {

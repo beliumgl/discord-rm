@@ -32,3 +32,9 @@ add_executable(discord-rm "${CMAKE_SOURCE_DIR}/src/main.cpp"
 target_include_directories(discord-rm PRIVATE "${CMAKE_SOURCE_DIR}"
                                               "${argparse_SOURCE_DIR}/include")
 target_link_libraries(discord-rm PRIVATE fmt::fmt nlohmann_json::nlohmann_json curl)
+
+if (MSVC)
+    target_compile_options(discord-rm PRIVATE /W4 /WX)
+else()
+    target_compile_options(discord-rm PRIVATE -Wall -Wextra -Wpedantic -Werror)
+endif()

@@ -23,7 +23,7 @@ size_t write_callback(void* contents, size_t size, size_t nmemb, void* userp) {
      * the callback allows us to process or store the data in a custom way, such as appending it to a std::string in memory.
      * This is essential if you want to capture the HTTP response for further use in your program, rather than just printing or saving it directly.
      */
-    ((std::string*)userp)->append((char*)contents, size * nmemb);
+    static_cast<std::string *>(userp)->append(static_cast<char *>(contents), size * nmemb);
     return size * nmemb;
 }
 
@@ -45,7 +45,7 @@ std::string url_encode(const std::string& value) {
             continue;
         }
 
-        escaped << '%' << std::setw(2) << int((unsigned char) c);
+        escaped << '%' << std::setw(2) << static_cast<int>(static_cast<unsigned char>(c));
     }
     return escaped.str();
 }

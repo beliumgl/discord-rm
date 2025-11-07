@@ -54,10 +54,10 @@ argparse::ArgumentParser& create_arguments() {
 void process_arguments(ArgumentParser& program, int argc, char** argv) {
     program.parse_args(argc, argv);
 
-    bool is_interactive = program.get<bool>("--interactive");
-    std::string sender = program.get<std::string>("--sender-id");
-    std::string guild  = program.get<std::string>("--guild-id");
-    std::string channel= program.get<std::string>("--channel-id");
+    const bool is_interactive = program.get<bool>("--interactive");
+    const auto sender     = program.get<std::string>("--sender-id");
+    const auto guild      = program.get<std::string>("--guild-id");
+    const auto channel    = program.get<std::string>("--channel-id");
 
     if (!is_interactive) {
         if (sender.empty())

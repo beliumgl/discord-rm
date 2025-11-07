@@ -42,7 +42,7 @@ void InteractiveSession() {
     SENDER_ID = sender_id;
 }
 
-int main(int argc, char** argv) {
+int main(const int argc, char** argv) {
     try {
         fmt::print("discord-rm\n");
         fmt::print("CLI removal tool for Discord chats, using an authorization token and the Discord API.\n");

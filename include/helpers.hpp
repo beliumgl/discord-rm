@@ -23,11 +23,11 @@
 using Query = std::pair<std::string, std::string>;
 
 inline std::string format_string(const std::string_view& s) {
-    std::string str = static_cast<std::string>(s);
+    auto str = static_cast<std::string>(s);
     str.erase(std::remove_if(str.begin(), str.end(),
-                             [](unsigned char c) { return std::isspace(c); }), str.end()); // Remove all whitespace
+                             [](const unsigned char c) { return std::isspace(c); }), str.end()); // Remove all whitespace
     std::transform(str.begin(), str.end(), str.begin(),
-                   [](unsigned char c) { return std::tolower(c); }); // Convert to lowercase
+                   [](const unsigned char c) { return std::tolower(c); }); // Convert to lowercase
     return str;
 }
 
@@ -43,23 +43,23 @@ inline void input(const std::string_view& msg, std::string& save) {
     ask(msg, save);
 }
 
-inline void log(bool isVerbose, const std::string_view& msg) {
-    if (!isVerbose)
+inline void log(const bool is_verbose, const std::string_view& msg) {
+    if (!is_verbose)
         return;
 
     fmt::print("{}\n", msg);
 }
 
-inline void debug(bool isDebug, const std::string_view& msg) { // Rename for `log` function
-    log(isDebug, msg);
+inline void debug(const bool is_debug, const std::string_view& msg) { // Rename for `log` function
+    log(is_debug, msg);
 }
 
-inline bool is_system_message(int type) { return (type < 6 || type > 21) && type != 0; }
+inline bool is_system_message(const int type) { return (type < 6 || type > 21) && type != 0; }
 
 inline void handle_rate_limit(nlohmann::json response) {
     constexpr unsigned int DELAY_MULTIPLIER = 2;
 
-    unsigned int new_delay = static_cast<unsigned int>(response["retry_after"].get<double>());
+    const auto new_delay = static_cast<unsigned int>(response["retry_after"].get<double>());
     std::this_thread::sleep_for(std::chrono::seconds(new_delay * DELAY_MULTIPLIER)); // Wait a little longer to ensure not hit rate limit again
 }
 
