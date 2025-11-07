@@ -8,6 +8,7 @@
 
 #include <include/config.hpp>
 
+unsigned int DELAY_IN_MS     = DELAY_IN_MS_DEFAULT;
 std::string  DISCORD_TOKEN;
 bool         IS_VERBOSE      = false;
 bool         IS_DEBUG        = false;

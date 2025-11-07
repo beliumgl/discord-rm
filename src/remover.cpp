@@ -174,7 +174,7 @@ REMOVER_STATUS discordRM() {
     json messages;
 
     while (true) { // While loop to remove all pages
-        std::this_thread::sleep_for(std::chrono::seconds(DELAY_IN_SECONDS_DEFAULT)); // Delay to not hit rate limit
+        std::this_thread::sleep_for(std::chrono::milliseconds(DELAY_IN_MS)); // Delay to not hit rate limit
         try {
             messages = search(offset);
             debug(IS_DEBUG, std::string("Messages [JSON]:\n") + messages.dump());
@@ -225,15 +225,15 @@ REMOVER_STATUS discordRM() {
 
         for (const auto& msg: msgs) {
             try {
-                std::this_thread::sleep_for(std::chrono::seconds(DELAY_IN_SECONDS_DEFAULT)); // Delay to not hit rate limit
+                std::this_thread::sleep_for(std::chrono::seconds(DELAY_IN_MS_DEFAULT)); // Delay to not hit rate limit
                 deleteMessage(msg);
             } catch (...) {
                 if (IS_SKIP_IF_FAIL) {
-                    log(IS_VERBOSE, "Delete Message failed! Skipping...");
+                    log(IS_VERBOSE, "WARNING: Delete Message failed! Skipping...");
                     continue;
                 }
 
-                log(IS_VERBOSE, "Delete Message failed! Please try again later.");
+                log(IS_VERBOSE, "ERROR: Delete Message failed! Please try again later.");
                 return REMOVER_STATUS::DELETE_MESSAGE_FAILED;
             }
         }

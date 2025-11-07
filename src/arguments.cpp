@@ -26,12 +26,16 @@ argparse::ArgumentParser& createArguments() {
         .help("Delete messages without confirmation")
         .default_value(false)
         .implicit_value(true);
+    program.add_argument("-dl", "--delay")
+        .help("Delay time in milliseconds")
+        .scan<'u', unsigned int>()
+        .default_value(DELAY_IN_MS_DEFAULT);
     program.add_argument("-i", "--interactive")
-        .help("Interactive mode.")
+        .help("Interactive mode")
         .default_value(false)
         .implicit_value(true);
     program.add_argument("-sif", "--skip-if-fail")
-        .help("Won't exit if message deletion fails.")
+        .help("Won't exit if message deletion fails")
         .default_value(false)
         .implicit_value(true);
     program.add_argument("-s", "--sender-id")
@@ -68,6 +72,7 @@ void processArguments(ArgumentParser& program, int argc, char** argv) {
     SENDER_ID       = sender;
     GUILD_ID        = guild;
     CHANNEL_ID      = channel;
+    DELAY_IN_MS     = program.get<unsigned int>("--delay");
     IS_VERBOSE      = program.get<bool>("--verbose");
     IS_DEBUG        = program.get<bool>("--debug");
     IS_NOCONFIRM    = program.get<bool>("--no-confirm");

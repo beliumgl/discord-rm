@@ -1,3 +1,5 @@
 build/
 .kdev4/
 discord-rm.kdev4
+cmake-build-debug/
+.idea/

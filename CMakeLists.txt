@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.29)
-project(discord-rm VERSION 1.1)
+project(discord-rm VERSION 1.2)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -9,7 +9,7 @@ include(FetchContent)
 FetchContent_Declare(
   fmt
   GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-  GIT_TAG 11.2.0
+  GIT_TAG 12.1.0
 )
 FetchContent_Declare(
   argparse
