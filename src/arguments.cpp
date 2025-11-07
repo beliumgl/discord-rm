@@ -10,7 +10,7 @@
 #include <include/config.hpp>
 #include <stdexcept>
 
-argparse::ArgumentParser& createArguments() {
+argparse::ArgumentParser& create_arguments() {
     using namespace argparse;
 
     static ArgumentParser program("discord-rm", "1.1");
@@ -51,15 +51,15 @@ argparse::ArgumentParser& createArguments() {
     return program;
 }
 
-void processArguments(ArgumentParser& program, int argc, char** argv) {
+void process_arguments(ArgumentParser& program, int argc, char** argv) {
     program.parse_args(argc, argv);
 
-    bool isInteractive = program.get<bool>("--interactive");
+    bool is_interactive = program.get<bool>("--interactive");
     std::string sender = program.get<std::string>("--sender-id");
     std::string guild  = program.get<std::string>("--guild-id");
     std::string channel= program.get<std::string>("--channel-id");
 
-    if (!isInteractive) {
+    if (!is_interactive) {
         if (sender.empty())
             throw std::invalid_argument("`--sender-id` is required unless `--interactive` is set.");
         if (guild.empty())
@@ -68,7 +68,7 @@ void processArguments(ArgumentParser& program, int argc, char** argv) {
             throw std::invalid_argument("`--channel-id` is required unless `--interactive` is set.");
     }
 
-    IS_INTERACTIVE  = isInteractive;
+    IS_INTERACTIVE  = is_interactive;
     SENDER_ID       = sender;
     GUILD_ID        = guild;
     CHANNEL_ID      = channel;

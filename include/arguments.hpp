@@ -11,5 +11,5 @@
 #include <argparse/argparse.hpp>
 using namespace argparse;
 
-ArgumentParser& createArguments();
-void processArguments(ArgumentParser& p, int argc, char** argv);
+ArgumentParser& create_arguments();
+void process_arguments(ArgumentParser& p, int argc, char** argv);

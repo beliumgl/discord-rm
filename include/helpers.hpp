@@ -22,7 +22,7 @@
 
 using Query = std::pair<std::string, std::string>;
 
-inline std::string formatString(const std::string_view& s) {
+inline std::string format_string(const std::string_view& s) {
     std::string str = static_cast<std::string>(s);
     str.erase(std::remove_if(str.begin(), str.end(),
                              [](unsigned char c) { return std::isspace(c); }), str.end()); // Remove all whitespace
@@ -31,8 +31,8 @@ inline std::string formatString(const std::string_view& s) {
     return str;
 }
 
-inline bool isDMGuild(const std::string_view& guildID) { return guildID == "@me"; }
-inline bool parseInput(const std::string_view& in) { return formatString(in) == "y" || in == "Y"; }
+inline bool is_dm_guild(const std::string_view& guildID) { return guildID == "@me"; }
+inline bool parse_input(const std::string_view& in) { return format_string(in) == "y" || in == "Y"; }
 
 inline void ask(const std::string_view& question, std::string& save) {
     fmt::print("{}", question);
@@ -54,19 +54,19 @@ inline void debug(bool isDebug, const std::string_view& msg) { // Rename for `lo
     log(isDebug, msg);
 }
 
-inline bool isSystemMessage(int type) { return (type < 6 || type > 21) && type != 0; }
+inline bool is_system_message(int type) { return (type < 6 || type > 21) && type != 0; }
 
-inline void handleRateLimit(nlohmann::json response) {
+inline void handle_rate_limit(nlohmann::json response) {
     constexpr unsigned int DELAY_MULTIPLIER = 2;
 
-    unsigned int newDelay = static_cast<unsigned int>(response["retry_after"].get<double>());
-    std::this_thread::sleep_for(std::chrono::seconds(newDelay * DELAY_MULTIPLIER)); // Wait a little longer to ensure not hit rate limit again
+    unsigned int new_delay = static_cast<unsigned int>(response["retry_after"].get<double>());
+    std::this_thread::sleep_for(std::chrono::seconds(new_delay * DELAY_MULTIPLIER)); // Wait a little longer to ensure not hit rate limit again
 }
 
-size_t writeCallback(void* contents, size_t size, size_t nmemb, void* userp);
-std::string urlEncode(const std::string& value);
-std::string buildQueryString(const std::vector<Query>& params);
-std::pair<CURL*, CURLcode> sendRequest(std::string& response,
+size_t write_callback(void* contents, size_t size, size_t nmemb, void* userp);
+std::string url_encode(const std::string& value);
+std::string build_query_string(const std::vector<Query>& params);
+std::pair<CURL*, CURLcode> send_request(std::string& response,
                                        const std::string& _headers,
                                        const std::string& url,
                                        const std::string& method);

@@ -15,31 +15,31 @@
 #include <stdexcept>
 
 void InteractiveSession() {
-    bool isVerbose = false, isDebug = false;
-    std::string verboseInput, debugInput, guildID, channelID, senderID;
+    bool is_verbose = false, is_debug = false;
+    std::string verbose_input, debug_input, guild_id, channel_id, sender_id;
 
-    ask("Enable verbose output? [y/n]: ", verboseInput);
-    ask("Enable debug output (intended for development)? [y/n]: ", debugInput);
-    input("Enter guild ID (or '@me' for DMs): ", guildID);
-    input("Enter channel ID: ", channelID);
-    input("Enter sender ID: ", senderID);
+    ask("Enable verbose output? [y/n]: ", verbose_input);
+    ask("Enable debug output (intended for development)? [y/n]: ", debug_input);
+    input("Enter guild ID (or '@me' for DMs): ", guild_id);
+    input("Enter channel ID: ", channel_id);
+    input("Enter sender ID: ", sender_id);
 
-    if (parseInput(verboseInput))
-        isVerbose = true;
-    if (parseInput(debugInput))
-        isDebug = true;
-    if (guildID.empty())
+    if (parse_input(verbose_input))
+        is_verbose = true;
+    if (parse_input(debug_input))
+        is_debug = true;
+    if (guild_id.empty())
         throw std::invalid_argument("Guild ID is required.");
-    if (channelID.empty())
+    if (channel_id.empty())
         throw std::invalid_argument("Channel ID is required.");
-    if (senderID.empty())
+    if (sender_id.empty())
         throw std::invalid_argument("Sender ID is required.");
 
-    IS_VERBOSE = isVerbose;
-    IS_DEBUG = isDebug;
-    GUILD_ID = guildID;
-    CHANNEL_ID = channelID;
-    SENDER_ID = senderID;
+    IS_VERBOSE = is_verbose;
+    IS_DEBUG = is_debug;
+    GUILD_ID = guild_id;
+    CHANNEL_ID = channel_id;
+    SENDER_ID = sender_id;
 }
 
 int main(int argc, char** argv) {
@@ -48,8 +48,8 @@ int main(int argc, char** argv) {
         fmt::print("CLI removal tool for Discord chats, using an authorization token and the Discord API.\n");
         fmt::print("By beliumgl.\n\n");
 
-        auto& args = createArguments();
-        processArguments(args, argc, argv);
+        auto& args = create_arguments();
+        process_arguments(args, argc, argv);
 
         /*
          * Ask for the Discord token, even if not in an interactive session.
@@ -71,13 +71,13 @@ int main(int argc, char** argv) {
             std::string in;
             ask("Do you want to continue? [y/n]: ", in);
 
-            if (!parseInput(in)) {
+            if (!parse_input(in)) {
                 fmt::print("Aborting operation.\n");
                 return 0;
             }
         }
 
-        discordRM();
+        discord_rm();
         fmt::print("All messages have been removed.\n");
         return 0;
     } catch (const std::exception& ex) {
