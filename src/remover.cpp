@@ -224,7 +224,7 @@ void discordRM() {
 
         for (const auto& msg: msgs) {
             try {
-                std::this_thread::sleep_for(std::chrono::seconds(DELAY_IN_MS_DEFAULT)); // Delay to not hit rate limit
+                std::this_thread::sleep_for(std::chrono::milliseconds(DELAY_IN_MS_DEFAULT)); // Delay to not hit rate limit
                 deleteMessage(msg);
             } catch (...) {
                 if (IS_SKIP_IF_FAIL) {
