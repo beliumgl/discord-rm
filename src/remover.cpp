@@ -166,7 +166,7 @@ void deleteMessage(const Message& message) {
     log(IS_VERBOSE, "Delete Message: Message deleted successfully!");
 }
 
-REMOVER_STATUS discordRM() {
+void discordRM() {
     log(IS_VERBOSE, "Remover: Searching for messages to delete...");
 
     unsigned short offset = 0;
@@ -184,8 +184,7 @@ REMOVER_STATUS discordRM() {
                 continue;
             }
 
-            log(IS_VERBOSE, "Search failed! Try again later.");
-            return REMOVER_STATUS::SEARCH_FAILED;
+            throw std::runtime_error("Search failed! Try again later.");
         }
 
         // Parse Messages
@@ -233,11 +232,8 @@ REMOVER_STATUS discordRM() {
                     continue;
                 }
 
-                log(IS_VERBOSE, "ERROR: Delete Message failed! Please try again later.");
-                return REMOVER_STATUS::DELETE_MESSAGE_FAILED;
+                throw std::runtime_error("Delete Message failed! Please try again later.");
             }
         }
     }
-
-    return REMOVER_STATUS::OK;
 }

@@ -77,13 +77,7 @@ int main(int argc, char** argv) {
             }
         }
 
-        REMOVER_STATUS status = discordRM();
-
-        if (status != REMOVER_STATUS::OK) {
-            fmt::print("ERROR: Failed to remove messages.\n");
-            return 1;
-        }
-
+        discordRM();
         fmt::print("All messages have been removed.\n");
         return 0;
     } catch (const std::exception& ex) {
