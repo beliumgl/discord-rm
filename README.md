@@ -15,7 +15,7 @@ Using self-bots violates Discord's Terms of Service and may result in account te
 This tool utilizes [ArgParse](https://github.com/p-ranav/argparse) for command-line argument parsing.
 
 | Short | Full            | Description                                                                                |
-| ----- | --------------- | ------------------------------------------------------------------------------------------ | 
+| ----- | --------------- |--------------------------------------------------------------------------------------------| 
 | `-v`  | `--verbose`     | Enables verbose logging.                                                                   |                                     
 | `-d`  | `--debug`       | Outputs debug information for developers.                                                  |                                           
 | `-nc` | `--no-confirm`  | Deletes messages without initial confirmation.                                             |                                      
@@ -24,6 +24,7 @@ This tool utilizes [ArgParse](https://github.com/p-ranav/argparse) for command-l
 | `-s`  | `--sender-id`   | Specifies the user ID whose messages should be removed (requires appropriate permissions). |                                   
 | `-g`  | `--guild-id`    | Specifies the server (guild) ID where messages should be removed.                          |                    
 | `-c`  | `--channel-id`  | Specifies the channel ID within the guild where messages should be removed.                | 
+| `-dl` | `--delay`       | Specifies a custom delay to minimize the chance of rate limiting.                          |
 
 ---
 
