@@ -55,6 +55,7 @@ inline void debug(const bool is_debug, const std::string_view& msg) { // Rename 
 }
 
 inline bool is_system_message(const int type) { return (type < 6 || type > 21) && type != 0; }
+inline bool is_http_error(const long code) { return code < 200 || code >= 300; }
 
 inline void handle_rate_limit(nlohmann::json response) {
     constexpr unsigned int DELAY_MULTIPLIER = 2;

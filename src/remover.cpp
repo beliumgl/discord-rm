@@ -72,12 +72,18 @@ json search(const unsigned short offset) {
 
     log(IS_VERBOSE, "Search: Sending request...");
     auto [curl, result] = send_request(response, auth_header, url, CURL_GET_METHOD);
+    long http_code = 0;
+
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
 
     if (result != CURLE_OK)
         throw std::runtime_error("Failed to send search request.");
     debug(IS_DEBUG, "Response: " + response);
 
     curl_easy_cleanup(curl);
+
+    if (http_code == 401) throw std::invalid_argument("Token is invalid or expired.");
+    if (is_http_error(http_code)) throw std::runtime_error("Failed to search messages.");
 
     json json_response = json::parse(response);
 
@@ -126,25 +132,26 @@ void delete_message(const Message& message) {
             handle_rate_limit(j);
             log(IS_VERBOSE, "Delete Message: Retrying...");
             delete_message(message); // Retry
-        } catch (...) {
+        } catch (const json::exception& _) {
             throw std::runtime_error("Failed to parse rate limit JSON.");
         }
     }
 
     if (http_code == 400 && !response.empty()) {
         try {
-            json j = json::parse(response);
+            const json j = json::parse(response);
             if (j.contains("code") && j["code"] == ARCHIVED_THREAD_CODE) {
                 log(IS_VERBOSE, "Delete Message: Cannot remove archived thread. Skipping...");
                 return;
             }
-        } catch (...) {
+        } catch (const json::exception& _) {
             throw std::runtime_error("Failed to parse error JSON.");
         }
     }
+    else if (http_code == 403) throw std::invalid_argument("Don't have access to that message.");
 
-    if (http_code < 200 || http_code >= 300) { // HTTP error codes are usually less than 200 or greater than or equal to 300
-        throw std::runtime_error("Failed to delete message request.");
+    if (is_http_error(http_code)) {
+        throw std::runtime_error("Failed to delete message.");
     }
 
     log(IS_VERBOSE, "Delete Message: Message deleted successfully!");
@@ -162,13 +169,14 @@ void discord_rm() {
         try {
             messages = search(offset);
             debug(IS_DEBUG, std::string("Messages [JSON]:\n") + messages.dump());
-        } catch (...) {
+        } catch (const std::exception& e) {
             if (IS_SKIP_IF_FAIL) {
-                log(IS_VERBOSE, "Search failed! Skipping...");
+                std::string err_msg = static_cast<std::string>("Search failed: ") + e.what() + "! Skipping...";
+                log(IS_VERBOSE, err_msg);
                 continue;
             }
 
-            throw std::runtime_error("Search failed! Try again later.");
+            throw;
         }
 
         const unsigned int total_results = messages["total_results"].get<int>();
@@ -216,13 +224,14 @@ void discord_rm() {
                 std::this_thread::sleep_for(std::chrono::milliseconds(DELAY_IN_MS_DEFAULT)); // Delay to not hit rate limit
                 delete_message(msg);
                 ++deleted_messages;
-            } catch (...) {
+            } catch (const std::exception& e) {
                 if (IS_SKIP_IF_FAIL) {
-                    log(IS_VERBOSE, "Delete Message failed! Skipping...");
+                    std::string err_msg = static_cast<std::string>("Delete Message failed: ") + e.what() + "! Skipping...";
+                    log(IS_VERBOSE, err_msg);
                     continue;
                 }
 
-                throw std::runtime_error("Delete Message failed! Please try again later.");
+                throw;
             }
         }
     }
