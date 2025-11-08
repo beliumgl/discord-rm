@@ -25,6 +25,12 @@ This tool utilizes [ArgParse](https://github.com/p-ranav/argparse) for command-l
 | `-g`  | `--guild-id`    | Specifies the server (guild) ID where messages should be removed.                          |                    
 | `-c`  | `--channel-id`  | Specifies the channel ID within the guild where messages should be removed.                | 
 | `-dl` | `--delay`       | Specifies a custom delay to minimize the chance of rate limiting.                          |
+| `-m`  | `--mentions`    | Specify the user IDs of the mentioned people.                                              |
+| `-b`  | `--before-date` | Delete only messages before the specified date. (ISO 8601 e.g. 2015-01-01)                 |
+| `-dd` | `--during-date` | Delete only messages during the specified date. (ISO 8601 e.g. 2015-01-01)                 |  
+| `-a`  | `--after-date`  | Delete only messages after the specified date. (ISO 8601 e.g. 2015-01-01)                  |
+
+`--no-link`, `--no-poll`, `--no-embed`, `--no-file`, `--no-video`, `--no-image`, `--no-audio`, `--no-sticker`, `--no-forward`, `--no-pinned` are also used to exclude messages from deletion.
 
 ---
 
