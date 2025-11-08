@@ -12,11 +12,11 @@
 #include <nlohmann/json.hpp>
 #include <curl/curl.h>
 #include <string>
+#include <utility>
 #include <vector>
 #include <stdexcept>
 #include <chrono>
 #include <thread>
-#include <utility>
 #include <unordered_set>
 
 using nlohmann::json;
@@ -29,16 +29,15 @@ const std::string CURL_GET_METHOD = "GET";
 const std::string CURL_DELETE_METHOD = "DELETE";
 
 struct Message {
-    std::string channel_id;
     std::string id;
     int type{};
 
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(Message, id, type, channel_id);
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(Message, id, type);
 
+    Message(std::string id, int type) : id(std::move(id)), type(type) {}
     bool operator==(const Message& other) const { // Required for unordered_set
         return id == other.id &&
-        type == other.type &&
-        channel_id == other.channel_id;
+        type == other.type;
     }
 };
 
@@ -47,8 +46,7 @@ template<> struct std::hash<Message> // Required for unordered_set
     std::size_t operator()(const Message& m) const noexcept {
         std::size_t h1 = std::hash<std::string>{}(m.id);
         std::size_t h2 = std::hash<int>{}(m.type);
-        std::size_t h3 = std::hash<std::string>{}(m.channel_id);
-        return h1 ^ (h2 << 1) ^ (h3 << 2);
+        return h1 ^ (h2 << 1);
     }
 };
 
@@ -104,7 +102,7 @@ void delete_message(const Message& message) {
         return; // Cannot remove system message
     }
 
-    const std::string delete_api_url = DISCORD_API_URL_BASE + DISCORD_API_VERSION + "/channels/" + message.channel_id + "/messages/" + message.id;
+    const std::string delete_api_url = DISCORD_API_URL_BASE + DISCORD_API_VERSION + "/channels/" + CHANNEL_ID + "/messages/" + message.id;
     const std::string auth_header = DISCORD_API_AUTHORIZATION_KEY + DISCORD_TOKEN;
     std::string response;
     debug(IS_DEBUG, "Full URL: " + delete_api_url);
@@ -155,9 +153,8 @@ void delete_message(const Message& message) {
 void discord_rm() {
     log(IS_VERBOSE, "Remover: Searching for messages to delete...");
 
-    unsigned short offset = 0;
-    unsigned short deleted_messages = 0;
-    std::unordered_set<Message> skipped_messages_set; // fix infinite loop (maybe, finally???)
+    unsigned short offset = 0, deleted_messages = 0;
+    std::unordered_set<Message> skipped_messages_set; // all-time skipped messages
     json messages;
 
     while (true) {
@@ -179,25 +176,20 @@ void discord_rm() {
         // Parse Messages
         log(IS_VERBOSE, "Remover: Parsing the messages...");
         std::vector<Message> msgs;
-        unsigned char skipped_messages = 0;
+        unsigned char skipped_messages = 0; // skipped messages in current page
 
-        for (const auto& group : messages["messages"]) {
-            for (const auto& msg : group) {
-                if (!msg.contains("id")) continue; // We want to parse only user messages
+        const auto msg_group = messages["messages"];
+        for (const auto& msg : msg_group) {
+            if (!msg[0].contains("id")) continue; // We want to parse only user messages
 
-                Message m;
-                m.id = msg["id"].get<std::string>();
-                m.channel_id = CHANNEL_ID;
-                m.type = msg["type"].get<int>();
-
-                if (is_system_message(m.type)) {
-                    ++skipped_messages;
-                    skipped_messages_set.insert(m);
-                    continue;
-                }
-
-                msgs.emplace_back(m);
+            Message m(msg[0]["id"].get<std::string>(), msg[0]["type"].get<int>());
+            if (is_system_message(m.type)) {
+                ++skipped_messages;
+                skipped_messages_set.insert(m);
+                continue;
             }
+
+            msgs.emplace_back(m);
         }
 
         const size_t skipped_messages_set_size = skipped_messages_set.size();
@@ -208,7 +200,8 @@ void discord_rm() {
             deleted_messages = 0;
 
             // This means Discord hasn't updated the data yet, so we wait 10 times longer to minimize requests
-            std::this_thread::sleep_for(std::chrono::milliseconds(std::max(DELAY_IN_MS_DEFAULT, DELAY_IN_MS * 10)));
+            log(IS_VERBOSE, "Remover: Discord hasn't update the data yet, waiting 10 times longer to minimize requests...");
+            std::this_thread::sleep_for(std::chrono::milliseconds(std::max(DELAY_IN_MS_DEFAULT * 10, DELAY_IN_MS * 10)));
             continue;
         }
 
