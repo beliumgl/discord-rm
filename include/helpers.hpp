@@ -24,14 +24,14 @@ using Query = std::pair<std::string, std::string>;
 
 inline std::string format_string(const std::string_view& s) {
     auto str = static_cast<std::string>(s);
-    str.erase(std::remove_if(str.begin(), str.end(),
-                             [](const unsigned char c) { return std::isspace(c); }), str.end()); // Remove all whitespace
-    std::transform(str.begin(), str.end(), str.begin(),
-                   [](const unsigned char c) { return std::tolower(c); }); // Convert to lowercase
+    std::erase_if(str,
+                  [](const unsigned char c) { return std::isspace(c); }); // Remove all whitespace
+    std::ranges::transform(str, str.begin(),
+                           [](const unsigned char c) { return std::tolower(c); }); // Convert to lowercase
     return str;
 }
 
-inline bool is_dm_guild(const std::string_view& guildID) { return guildID == "@me"; }
+inline bool is_dm_guild(const std::string_view& guild_id) { return guild_id == "@me"; }
 inline bool parse_input(const std::string_view& in) { return format_string(in) == "y" || in == "Y"; }
 
 inline void ask(const std::string_view& question, std::string& save) {
@@ -67,7 +67,9 @@ inline void handle_rate_limit(nlohmann::json response) {
 size_t write_callback(void* contents, size_t size, size_t nmemb, void* userp);
 std::string url_encode(const std::string& value);
 std::string build_query_string(const std::vector<Query>& params);
+std::string convert_to_snowflake_id(const std::string& iso8601);
+std::vector<Query> construct_query_params(const std::string& offset);
 std::pair<CURL*, CURLcode> send_request(std::string& response,
-                                       const std::string& _headers,
-                                       const std::string& url,
-                                       const std::string& method);
+                                        const std::string& _headers,
+                                        const std::string& url,
+                                        const std::string& method);

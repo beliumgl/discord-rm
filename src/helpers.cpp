@@ -7,8 +7,8 @@
  */
 
 #include <include/helpers.hpp>
+#include <include/config.hpp>
 #include <curl/curl.h>
-#include <cstddef>
 #include <string>
 #include <sstream>
 #include <iomanip>
@@ -61,6 +61,59 @@ std::string build_query_string(const std::vector<Query>& params) {
         }
     }
     return oss.str();
+}
+
+std::vector<Query> construct_query_params(const std::string& offset) {
+    constexpr unsigned long long int SNOWFLAKE_ID_1_DAY = 362387865600000ULL;
+
+    std::vector<Query> params = {
+        {"author_id", SENDER_ID},
+        {"channel_id", CHANNEL_ID},
+        {"offset", offset},
+        {"limit", std::to_string(PAGE_LIMIT)}
+    };
+
+    if (!MENTIONS.empty()) {
+        for (const auto& mention : MENTIONS) params.emplace_back("mentions", mention);
+    }
+
+    if (!REMOVE_PINNED) params.emplace_back("pinned", "false");
+
+    if (!BEFORE_DATE.empty()) {
+        params.emplace_back("max_id", BEFORE_DATE);
+    }
+    if (!AFTER_DATE.empty()) {
+        params.emplace_back("min_id", std::to_string(std::stoull(AFTER_DATE) + SNOWFLAKE_ID_1_DAY));
+    }
+    if (!DURING_DATE.empty()) {
+        params.emplace_back("min_id", DURING_DATE);
+        params.emplace_back("max_id", std::to_string(std::stoull(DURING_DATE) + SNOWFLAKE_ID_1_DAY));
+    }
+    // The `has` parameter will be processed during parsing.
+
+    return params;
+}
+
+std::string convert_to_snowflake_id(const std::string& iso8601) {
+    // Discord uses its own timestamp system instead of the traditional Unix timestamps
+    constexpr unsigned long long int DISCORD_EPOCH = 1420070400000ULL;
+
+    std::tm tm = {};
+    std::istringstream ss(iso8601);
+
+    ss >> std::get_time(&tm, "%Y-%m-%d");
+    if (ss.fail()) throw std::runtime_error("Failed to parse ISO8601 date");
+    tm.tm_isdst = -1;
+
+    const std::time_t time = std::mktime(&tm);
+    if (time == -1) throw std::runtime_error("Failed to parse ISO8601 date");
+
+    const auto time_point = std::chrono::system_clock::from_time_t(time);
+    const auto ms_since_epoch = std::chrono::duration_cast<std::chrono::milliseconds>(time_point.time_since_epoch()).count();
+    const unsigned long long int timestamp = ms_since_epoch - DISCORD_EPOCH;
+    const unsigned long long int snowflake = timestamp << 22;
+
+    return std::to_string(snowflake);
 }
 
 std::pair<CURL*, CURLcode> send_request(std::string& response,

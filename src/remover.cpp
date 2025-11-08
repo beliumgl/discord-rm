@@ -56,13 +56,7 @@ json search(const unsigned short offset) {
                             ? DISCORD_API_URL_BASE + DISCORD_API_VERSION + "/channels/" + CHANNEL_ID + "/messages/"
                             : DISCORD_API_URL_BASE + DISCORD_API_VERSION + "/guilds/" + GUILD_ID + "/messages/";
 
-    std::vector<Query> params = {
-        {"author_id", SENDER_ID},
-        {"channel_id", CHANNEL_ID},
-        {"offset", std::to_string(offset)},
-        {"limit", std::to_string(PAGE_LIMIT)}
-    };
-
+    std::vector<Query> params = construct_query_params(std::to_string(offset));
     const std::string query = build_query_string(params);
     std::string response, auth_header = DISCORD_API_AUTHORIZATION_KEY + DISCORD_TOKEN;;
     debug(IS_DEBUG, "Query Parameters: " + query);
@@ -78,7 +72,7 @@ json search(const unsigned short offset) {
 
     if (result != CURLE_OK)
         throw std::runtime_error("Failed to send search request.");
-    debug(IS_DEBUG, "Response: " + response);
+    debug(IS_DEBUG, "Response: " + response + ", Code: " + std::to_string(http_code));
 
     curl_easy_cleanup(curl);
 
@@ -160,7 +154,7 @@ void delete_message(const Message& message) {
 void discord_rm() {
     log(IS_VERBOSE, "Remover: Searching for messages to delete...");
 
-    unsigned short offset = 0, deleted_messages = 0;
+    unsigned int offset = 0, deleted_messages = 0;
     std::unordered_set<Message> skipped_messages_set; // all-time skipped messages
     json messages;
 
@@ -187,11 +181,38 @@ void discord_rm() {
         unsigned char skipped_messages = 0; // skipped messages in current page
 
         const auto msg_group = messages["messages"];
+
+        /*
+         * I want to note why we handle search parameters here:
+         * If we used the search API with the `has` parameter, text messages would disappear
+         * from the results. Because of this they will be just skipped as system messages.
+         */
         for (const auto& msg : msg_group) {
             if (!msg[0].contains("id")) continue; // We want to parse only user messages
 
             Message m(msg[0]["id"].get<std::string>(), msg[0]["type"].get<int>());
-            if (is_system_message(m.type)) {
+
+            std::string content_type;
+            const auto attachments = msg[0]["attachments"], embeds = msg[0]["embeds"];
+            const bool attachments_empty = attachments.empty(), embeds_empty = embeds.empty(), is_poll = msg[0].contains("poll");
+            bool snapshots_empty = msg[0].contains("message_snapshots") ? msg[0]["message_snapshots"].empty() : true;
+            bool stickers_items_empty = msg[0].contains("sticker_items") ? msg[0]["sticker_items"].empty() : true;
+
+            if (!attachments_empty && attachments[0].contains("content_type")) content_type = attachments[0]["content_type"].get<std::string>();
+            if (!embeds_empty) const auto type = embeds[0]["type"].get<std::string>();
+
+            // sorry... at least it works
+            if (is_system_message(m.type) ||
+                (is_poll && NO_POLL) ||
+                (!embeds_empty && NO_EMBED) ||
+                (!embeds_empty && embeds[0]["type"] == "link" && NO_LINK) ||
+                (!attachments_empty && content_type.empty() && NO_FILE) ||
+                (!attachments_empty && content_type.starts_with("image") && NO_IMAGE) ||
+                (!attachments_empty && content_type.starts_with("video") && NO_VIDEO) ||
+                (!attachments_empty && content_type.starts_with("audio") && NO_SOUND) ||
+                (!stickers_items_empty && NO_STICKER) ||
+                (!snapshots_empty && NO_FORWARD))
+            {
                 ++skipped_messages;
                 skipped_messages_set.insert(m);
                 continue;
