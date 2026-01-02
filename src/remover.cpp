@@ -44,8 +44,8 @@ struct Message {
 template<> struct std::hash<Message> // Required for unordered_set
 {
     std::size_t operator()(const Message& m) const noexcept {
-        std::size_t h1 = std::hash<std::string>{}(m.id);
-        std::size_t h2 = std::hash<int>{}(m.type);
+        const std::size_t h1 = std::hash<std::string>{}(m.id);
+        const std::size_t h2 = std::hash<int>{}(m.type);
         return h1 ^ (h2 << 1);
     }
 };
@@ -56,9 +56,11 @@ json search(const unsigned short offset) {
                             ? DISCORD_API_URL_BASE + DISCORD_API_VERSION + "/channels/" + CHANNEL_ID + "/messages/"
                             : DISCORD_API_URL_BASE + DISCORD_API_VERSION + "/guilds/" + GUILD_ID + "/messages/";
 
-    std::vector<Query> params = construct_query_params(std::to_string(offset));
+    const std::vector<Query> params = construct_query_params(std::to_string(offset));
     const std::string query = build_query_string(params);
-    std::string response, auth_header = DISCORD_API_AUTHORIZATION_KEY + DISCORD_TOKEN;;
+    const std::string auth_header = DISCORD_API_AUTHORIZATION_KEY + DISCORD_TOKEN;
+    std::string response;
+
     debug(IS_DEBUG, "Query Parameters: " + query);
 
     const std::string url = api_url + "search?" + query;
@@ -82,9 +84,9 @@ json search(const unsigned short offset) {
     json json_response = json::parse(response);
 
     if (json_response.contains("retry_after")) { // Rate limited by discord
-        log(IS_VERBOSE, "Search: Rate limited by Discord API! Trying again later...");
+        log(IS_VERBOSE, "Search: Rate limited by Discord API! Trying again later...", WARNING);
         handle_rate_limit(json_response);
-        log(IS_VERBOSE, "Search: Retrying...");
+        log(IS_VERBOSE, "Search: Retrying...", WARNING);
         json_response = search(offset); // Retry
     }
 
@@ -98,7 +100,7 @@ void delete_message(const Message& message) {
     debug(IS_DEBUG, std::string("[Delete Message] Parameters: Message (ID) = " + message.id));
 
     if (is_system_message(message.type)) { // Redundant, but left for safety
-        log(IS_VERBOSE, "Delete Message: System message. Skipping...");
+        log(IS_VERBOSE, "Delete Message: System message. Skipping...", WARNING);
         return; // Cannot remove system message
     }
 
@@ -122,9 +124,9 @@ void delete_message(const Message& message) {
     if (http_code == RATE_LIMITED_HTTP_CODE) { // Rate limited by Discord API
         try {
             const json j = json::parse(response);
-            log(IS_VERBOSE, "Delete Message: Rate limited by Discord API! Trying again later...");
+            log(IS_VERBOSE, "Delete Message: Rate limited by Discord API! Trying again later...", WARNING);
             handle_rate_limit(j);
-            log(IS_VERBOSE, "Delete Message: Retrying...");
+            log(IS_VERBOSE, "Delete Message: Retrying...", WARNING);
             delete_message(message); // Retry
         } catch (const json::exception& _) {
             throw std::runtime_error("Failed to parse rate limit JSON.");
@@ -135,7 +137,7 @@ void delete_message(const Message& message) {
         try {
             const json j = json::parse(response);
             if (j.contains("code") && j["code"] == ARCHIVED_THREAD_CODE) {
-                log(IS_VERBOSE, "Delete Message: Cannot remove archived thread. Skipping...");
+                log(IS_VERBOSE, "Delete Message: Cannot remove archived thread. Skipping...", WARNING);
                 return;
             }
         } catch (const json::exception& _) {
@@ -154,7 +156,7 @@ void delete_message(const Message& message) {
 void discord_rm() {
     log(IS_VERBOSE, "Remover: Searching for messages to delete...");
 
-    unsigned int offset = 0, deleted_messages = 0;
+    unsigned int offset = 0;
     std::unordered_set<Message> skipped_messages_set; // all-time skipped messages
     json messages;
 
@@ -166,7 +168,7 @@ void discord_rm() {
         } catch (const std::exception& e) {
             if (IS_SKIP_IF_FAIL) {
                 std::string err_msg = static_cast<std::string>("Search failed: ") + e.what() + "! Skipping...";
-                log(IS_VERBOSE, err_msg);
+                log(IS_VERBOSE, err_msg, WARNING);
                 continue;
             }
 
@@ -178,16 +180,14 @@ void discord_rm() {
         // Parse Messages
         log(IS_VERBOSE, "Remover: Parsing the messages...");
         std::vector<Message> msgs;
-        unsigned char skipped_messages = 0; // skipped messages in current page
-
-        const auto msg_group = messages["messages"];
+        unsigned char skipped_messages = 0, deleted_messages = 0; // skipped and deleted messages in current page
 
         /*
          * I want to note why we handle search parameters here:
          * If we used the search API with the `has` parameter, text messages would disappear
          * from the results. Because of this they will be just skipped as system messages.
          */
-        for (const auto& msg : msg_group) {
+        for (const auto msg_group = messages["messages"]; const auto& msg : msg_group) {
             if (!msg[0].contains("id")) continue; // We want to parse only user messages
 
             Message m(msg[0]["id"].get<std::string>(), msg[0]["type"].get<int>());
@@ -221,24 +221,9 @@ void discord_rm() {
             msgs.emplace_back(m);
         }
 
-        const size_t skipped_messages_set_size = skipped_messages_set.size();
-        if (msgs.empty() && total_results <= skipped_messages_set_size) break; // If total_results are system messages, then no messages remain to delete
-
-        if (msgs.empty() && total_results > skipped_messages_set_size) {
-            if (deleted_messages >= total_results - skipped_messages_set_size) break; // Deleted all messages
-            deleted_messages = 0;
-
-            // This means Discord hasn't updated the data yet, so we wait 10 times longer to minimize requests
-            log(IS_VERBOSE, "Remover: Discord hasn't update the data yet, waiting 10 times longer to minimize requests...");
-            std::this_thread::sleep_for(std::chrono::milliseconds(std::max(DELAY_IN_MS_DEFAULT * 10, DELAY_IN_MS * 10)));
-            continue;
-        }
-
-        if (msgs.empty() && skipped_messages > 0) {
-            // If at least one system message was skipped, skip them; otherwise, reset to the first page
-            offset = skipped_messages > 0 ? offset + skipped_messages : 0;
-            continue;
-        }
+        // All messages removed
+        if (total_results <= skipped_messages_set.size()) break;
+        if (offset == total_results) break;
 
         for (const auto& msg: msgs) {
             try {
@@ -248,12 +233,20 @@ void discord_rm() {
             } catch (const std::exception& e) {
                 if (IS_SKIP_IF_FAIL) {
                     std::string err_msg = static_cast<std::string>("Delete Message failed: ") + e.what() + "! Skipping...";
-                    log(IS_VERBOSE, err_msg);
+                    log(IS_VERBOSE, err_msg, WARNING);
                     continue;
                 }
 
                 throw;
             }
         }
+
+        if (offset + skipped_messages >= deleted_messages) offset += skipped_messages - deleted_messages;
+        if (deleted_messages <= 0 && skipped_messages <= 0) { // Return back with delay
+            // This means Discord hasn't updated the data yet, so we wait 10 times longer to minimize requests
+            log(IS_VERBOSE, "Remover: Discord hasn't update the data yet, waiting 10 times longer to minimize requests...", WARNING);
+            std::this_thread::sleep_for(std::chrono::milliseconds(std::max(DELAY_IN_MS_DEFAULT * 10, DELAY_IN_MS * 10)));
+            offset = 0;
+        };
     }
 }

@@ -11,6 +11,7 @@
 #include <include/remover.hpp>
 #include <include/helpers.hpp>
 #include <fmt/base.h>
+#include <fmt/color.h>
 #include <string>
 #include <stdexcept>
 
@@ -65,7 +66,7 @@ int main(const int argc, char** argv) {
         if (IS_INTERACTIVE)
             InteractiveSession();
 
-        fmt::print("\nWARNING: Using self-bots may result in account termination.\n\n");
+        fmt::print(fg(fmt::color::yellow), "\nWARNING: Using self-bots may result in account termination.\n\n");
 
         if (!IS_NOCONFIRM) {
             std::string in;
@@ -78,10 +79,10 @@ int main(const int argc, char** argv) {
         }
 
         discord_rm();
-        fmt::print("All messages have been removed.\n");
+        fmt::print(fg(fmt::color::light_green), "All messages have been removed.\n");
         return 0;
     } catch (const std::exception& ex) {
-        fmt::print("ERROR: {}\n", ex.what());
+        fmt::print(fg(fmt::color::red),"ERROR: {}\n", ex.what());
         return 1;
     }
 }

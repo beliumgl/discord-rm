@@ -11,6 +11,7 @@
 #include <nlohmann/json.hpp>
 #include <curl/curl.h>
 #include <fmt/base.h>
+#include <fmt/color.h>
 #include <utility>
 #include <string>
 #include <string_view>
@@ -21,6 +22,12 @@
 #include <thread>
 
 using Query = std::pair<std::string, std::string>;
+
+enum MessageType {
+    OK,
+    WARNING,
+    ERROR
+};
 
 inline std::string format_string(const std::string_view& s) {
     auto str = static_cast<std::string>(s);
@@ -43,15 +50,25 @@ inline void input(const std::string_view& msg, std::string& save) {
     ask(msg, save);
 }
 
-inline void log(const bool is_verbose, const std::string_view& msg) {
+inline void log(const bool is_verbose, const std::string_view& msg, const MessageType type = OK) {
     if (!is_verbose)
         return;
 
-    fmt::print("{}\n", msg);
+    switch (type) {
+        case OK:
+            fmt::print("{}\n", msg);
+            break;
+        case WARNING:
+            fmt::print(fg(fmt::color::yellow), "{}\n", msg);
+            break;
+        case ERROR:
+            fmt::print(fg(fmt::color::red), "{}\n", msg);
+            break;
+    }
 }
 
-inline void debug(const bool is_debug, const std::string_view& msg) { // Rename for `log` function
-    log(is_debug, msg);
+inline void debug(const bool is_debug, const std::string_view& msg, const MessageType type = OK) { // Rename for `log` function
+    log(is_debug, msg, type);
 }
 
 inline bool is_system_message(const int type) { return (type < 6 || type > 21) && type != 0; }
