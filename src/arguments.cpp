@@ -14,7 +14,7 @@
 argparse::ArgumentParser& create_arguments() {
     using namespace argparse;
 
-    static ArgumentParser program("discord-rm", "1.4");
+    static ArgumentParser program("discord-rm", "1.5");
     program.add_argument("-v", "--verbose")
         .help("Verbose output")
         .default_value(false)
@@ -52,6 +52,14 @@ argparse::ArgumentParser& create_arguments() {
         .help("Specify the mentioned user ID")
         .nargs(argparse::nargs_pattern::any)
         .default_value(std::vector<std::string>{});
+    program.add_argument("-dp", "--display")
+        .help("Display message content before deletion")
+        .default_value(false)
+        .implicit_value(true);
+    program.add_argument("-dpl", "--display-length")
+        .help("Max characters to display per message")
+        .scan<'u', unsigned int>()
+        .default_value(100u);
     program.add_argument("-b", "--before-date")
         .help("Will only delete messages before this date (ISO 8601 e.g. 2015-01-01T00:00:00)")
         .default_value(std::string());
@@ -136,6 +144,8 @@ void process_arguments(ArgumentParser& program, int argc, char** argv) {
     IS_NOCONFIRM        = program.get<bool>("--no-confirm");
     IS_SKIP_IF_FAIL     = program.get<bool>("--skip-if-fail");
     MENTIONS            = program.get<std::vector<std::string>>("--mentions");
+    IS_DISPLAY          = program.get<bool>("--display");
+    DISPLAY_LENGTH      = program.get<unsigned int>("--display-length");
     BEFORE_DATE         = !before_date.empty() ? convert_to_snowflake_id(before_date) : "";
     DURING_DATE         = !during_date.empty() ? convert_to_snowflake_id(during_date) : "";
     AFTER_DATE          = !after_date.empty() ? convert_to_snowflake_id(after_date) : "";
