@@ -14,21 +14,23 @@ Using self-bots violates Discord's Terms of Service and may result in account te
 
 This tool utilizes [ArgParse](https://github.com/p-ranav/argparse) for command-line argument parsing.
 
-| Short | Full            | Description                                                                                |
-| ----- | --------------- |--------------------------------------------------------------------------------------------| 
-| `-v`  | `--verbose`     | Enables verbose logging.                                                                   |                                     
-| `-d`  | `--debug`       | Outputs debug information for developers.                                                  |                                           
-| `-nc` | `--no-confirm`  | Deletes messages without initial confirmation.                                             |                                      
-| `-i`  | `--interactive` | Prompts for required data interactively instead of via command-line arguments.             | 
-| `-sif`| `--skip-if-fail`| Won't exit if message deletion fails.                                                      | 
-| `-s`  | `--sender-id`   | Specifies the user ID whose messages should be removed (requires appropriate permissions). |                                   
-| `-g`  | `--guild-id`    | Specifies the server (guild) ID where messages should be removed.                          |                    
-| `-c`  | `--channel-id`  | Specifies the channel ID within the guild where messages should be removed.                | 
-| `-dl` | `--delay`       | Specifies a custom delay to minimize the chance of rate limiting.                          |
-| `-m`  | `--mentions`    | Specify the user IDs of the mentioned people.                                              |
-| `-b`  | `--before-date` | Delete only messages before the specified date. (ISO 8601 e.g. 2015-01-01)                 |
-| `-dd` | `--during-date` | Delete only messages during the specified date. (ISO 8601 e.g. 2015-01-01)                 |  
-| `-a`  | `--after-date`  | Delete only messages after the specified date. (ISO 8601 e.g. 2015-01-01)                  |
+| Short | Full               | Description                                                                                |
+| ----- | ------------------ |--------------------------------------------------------------------------------------------| 
+| `-v`  | `--verbose`        | Enables verbose logging.                                                                   |                                     
+| `-d`  | `--debug`          | Outputs debug information for developers.                                                  |                                           
+| `-nc` | `--no-confirm`     | Deletes messages without initial confirmation.                                             |                                      
+| `-i`  | `--interactive`    | Prompts for required data interactively instead of via command-line arguments.             | 
+| `-sif`| `--skip-if-fail`   | Won't exit if message deletion fails.                                                      | 
+| `-s`  | `--sender-id`      | Specifies the user ID whose messages should be removed (requires appropriate permissions). |                                   
+| `-g`  | `--guild-id`       | Specifies the server (guild) ID where messages should be removed.                          |                    
+| `-c`  | `--channel-id`     | Specifies the channel ID within the guild where messages should be removed.                | 
+| `-dl` | `--delay`          | Specifies a custom delay to minimize the chance of rate limiting.                          |
+| `-m`  | `--mentions`       | Specify the user IDs of the mentioned people.                                              |
+| `-dp` | `--display`        | Display message content before deletion                                                    |
+| `-dpl`| `--display-length` | Max characters to display per message                                                   |
+| `-b`  | `--before-date`    | Delete only messages before the specified date. (ISO 8601 e.g. 2015-01-01)                 |
+| `-dd` | `--during-date`    | Delete only messages during the specified date. (ISO 8601 e.g. 2015-01-01)                 |  
+| `-a`  | `--after-date`     | Delete only messages after the specified date. (ISO 8601 e.g. 2015-01-01)                  |
 
 `--no-link`, `--no-poll`, `--no-embed`, `--no-file`, `--no-video`, `--no-image`, `--no-audio`, `--no-sticker`, `--no-forward`, `--no-pinned` are also used to exclude messages from deletion.
 
