@@ -11,6 +11,7 @@
 #include <vector>
 
 extern unsigned int                       DELAY_IN_MS;
+extern unsigned int                       DISPLAY_LENGTH;
 extern std::string                        DISCORD_TOKEN;
 extern bool                               IS_VERBOSE;
 extern bool                               IS_DEBUG;
@@ -25,6 +26,7 @@ extern std::vector<std::string>           MENTIONS;
 extern std::string                        BEFORE_DATE;
 extern std::string                        DURING_DATE;
 extern std::string                        AFTER_DATE;
+extern bool                               IS_DISPLAY;
 extern bool                               REMOVE_PINNED;
 extern bool                               NO_LINK;
 extern bool                               NO_EMBED;

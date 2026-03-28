@@ -31,10 +31,11 @@ const std::string CURL_DELETE_METHOD = "DELETE";
 struct Message {
     std::string id;
     int type{};
+    std::string content;
 
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(Message, id, type);
 
-    Message(std::string id, int type) : id(std::move(id)), type(type) {}
+    Message(std::string id, int type, std::string content = "") : id(std::move(id)), type(type), content(std::move(content)) {}
     bool operator==(const Message& other) const { // Required for unordered_set
         return id == other.id &&
         type == other.type;
@@ -109,7 +110,21 @@ void delete_message(const Message& message) {
     std::string response;
     debug(IS_DEBUG, "Full URL: " + delete_api_url);
 
+    if (IS_DISPLAY) {
+        const auto& c = message.content;
+        size_t i = 0;
+        for (unsigned int cp = 0; i < c.size() && cp < DISPLAY_LENGTH; ++i)
+            if ((static_cast<unsigned char>(c[i]) & 0xC0) != 0x80) ++cp;
+        while (i < c.size() && (static_cast<unsigned char>(c[i]) & 0xC0) == 0x80) ++i;
+        const auto text = std::string_view(c).substr(0, i);
+        if (i < c.size())
+            fmt::print("Message: {}{}\n", text, fmt::styled("...", fmt::fg(fmt::color::gray)));
+        else
+            fmt::print("Message: {}\n", text);
+    }
+
     log(IS_VERBOSE, "Delete Message: Sending request...");
+
     auto [curl, result] = send_request(response, auth_header, delete_api_url, CURL_DELETE_METHOD);
     long http_code = 0;
 
@@ -190,7 +205,8 @@ void discord_rm() {
         for (const auto msg_group = messages["messages"]; const auto& msg : msg_group) {
             if (!msg[0].contains("id")) continue; // We want to parse only user messages
 
-            Message m(msg[0]["id"].get<std::string>(), msg[0]["type"].get<int>());
+            std::string content = msg[0].contains("content") ? msg[0]["content"].get<std::string>() : "";
+            Message m(msg[0]["id"].get<std::string>(), msg[0]["type"].get<int>(), content);
 
             std::string content_type;
             const auto attachments = msg[0]["attachments"], embeds = msg[0]["embeds"];
